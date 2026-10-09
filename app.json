@@ -36,16 +36,19 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "現在地から散歩コースを作るために使用します",
-          "locationAlwaysPermission": false,
-          "locationAlwaysAndWhenInUsePermission": false,
-          "motionUsagePermission": false
+          "locationWhenInUsePermission": "現在地から散歩コースを作るために使用します。"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cd60bee8-8ded-4edb-81cc-711082e2dac5"
+      }
     }
   }
 }

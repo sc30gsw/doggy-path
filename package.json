@@ -44,8 +44,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
-    "doctor": "npx react-doctor@latest"
+    "lint": "oxlint",
+    "doctor": "npx react-doctor@latest",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "private": true
 }
