@@ -6,6 +6,9 @@
       "@/*": [
         "./src/*"
       ],
+      "@/convex/*": [
+        "./convex/*"
+      ],
       "@/assets/*": [
         "./assets/*"
       ]
