@@ -31,6 +31,10 @@ Ready means `http://localhost:8081/status` returns `packager-status:running` and
 
 `.env.local` must already contain `EXPO_PUBLIC_CONVEX_URL`. Expo loads that file. Create it with `bunx convex dev` against a development deployment (`CONVEX_AGENT_MODE=anonymous` for a cloud agent). Never `bunx convex deploy`. Never commit `.env.local` or API keys. Leave `app.json` `androidGoogleMapsApiKey` empty.
 
+Keep only `.env.local` in the repo root. Expo puts every `.env*` file there into the Metro graph, so a copy such as `.env.backup.local` is parsed as JavaScript and its contents, keys included, appear on the red error screen. Store backups outside the repo.
+
+The Convex CLI must be logged into the account that owns the deployment in `CONVEX_DEPLOYMENT`. `bunx convex login status` lists the accessible teams. A `CONVEX_DEPLOY_KEY` in `.env.local` overrides the login and can point the app at a deployment the Owner's dashboard cannot see.
+
 ## Doctor
 
 ```bash
