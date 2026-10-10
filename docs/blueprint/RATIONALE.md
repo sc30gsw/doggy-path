@@ -22,7 +22,7 @@ Constraints honoured:
 
 ## Usage (caller's view)
 
-The app sees **six Convex functions and three hooks**.
+The app sees **six Convex functions (plus Convex Auth's `signIn` / `signOut`) and three hooks**.
 
 ```tsx
 // Session gate: src/features/account/root-stack.tsx
@@ -30,11 +30,13 @@ const session = useSession(); // loading | signedOut | needsProfile | { kind: 'r
 <Stack.Protected guard={session.kind === 'needsProfile'}><Stack.Screen name="onboarding" /></Stack.Protected>
 
 // Onboarding and the Profile tab: one form, one upsert
+const save = useMutation(api.owners.save);
 const parsed = parseDogProfileDraft(draft); // FormResult<Owner, keyof DogProfileDraft>
-if (parsed.ok) await useMutation(api.owners.save)({ owner: parsed.value });
+if (parsed.ok) await save({ owner: parsed.value });
 
 // Course Conditions sheet: 「この条件で提案」, then close; Home follows the new proposal by itself
-await useRequestProposal()(parsed.value); // adds the device location only when Start Point is empty
+const requestProposal = useRequestProposal(); // adds the device location only when Start Point is empty
+await requestProposal(conditions);
 router.back();
 
 // Home: the Owner's current proposal, live. Actions exist only in the phases where they are valid.
@@ -65,12 +67,13 @@ await report({ type: 'built', scoring });                                       
   - Each phase carries exactly what the next step needs. `building` and `failed(building)` carry the `Assessment`, so 「このまま作る」 and retry never ask Jev again. Only `failed(checking)` re-runs the Condition Check.
   - The phase is also the job description. One internal action, `proposalRuns.run`, looks at the phase it loads and either assesses or builds.
   - Illegal combinations cannot be stored, such as "ready without courses" or "building without an assessment".
-- **`proposals`** also stores `conditions` (as entered), the resolved `startPoint` (with its `source`), and `dog`: a snapshot of the Dog Profile taken at request time. Runs, confirm and retry all judge that snapshot, so an edit mid-build cannot mix two dogs into one result.
+- **`proposals`** is keyed by `userId` (the Convex Auth user id, like `owners.userId`) and also stores `conditions` (as entered), the resolved `startPoint` (with its `source`), and `dog`: a snapshot of the Dog Profile taken at request time. Runs, confirm and retry all judge that snapshot, so an edit mid-build cannot mix two dogs into one result.
 - **`advance(state, event) → Transition | null`** is the whole lifecycle as one pure, total reducer. A `null` result is an idempotent no-op, which absorbs double taps, late runs and watchdogs. A transition with `startRun: true` makes `commit` bump `attempt` and schedule two things: the run, and a watchdog. The watchdog is the same `record` mutation with `{ failed: timedOut }`, scheduled `RUN_TIMEOUT_MS` (3 min) later.
-- **Fencing.** Runs report through `proposals.record({ proposalId, attempt, event })`, and events with a stale attempt are dropped. Runs never write the database. `convex/proposals.ts` is the only writer of the table, and `commit` is its only patch.
+- **Fencing.** Runs report through `proposals.record({ proposalId, attempt, event })`, and events with a stale attempt are dropped. Runs never write the database. `convex/proposals.ts` is the only writer of the table, and `commit` is its only patch. `proceed` and `retry` act only on the Owner's latest proposal, so a stale screen cannot restart an older one next to a new run.
+- **A timed-out run stops spending.** The watchdog cannot cancel a running action, so every external call carries its own timeout (ORS 30 s, Overpass 25 s, Jev 15 s), and a run's worst case ends well inside `RUN_TIMEOUT_MS`. By the time the Owner can retry a `timedOut` proposal, the old run has stopped calling ORS.
 - **`Assessment`** is `{ pace, length: LengthDecision, warnings, judgedBy }`: everything the first Jev request decides. That request asks these questions together, and Jev answers them in parallel:
   - targets-consistent (Noul), only when both targets are given
-  - too-much-load (Noul), only when at least one target is given
+  - too-much-load (Noul), always, because a Today's Memo like 「足を痛めている」 matters even with no targets
   - Walking Pace (Choice), always, because it also drives every time estimate
   - length class (Choice), only when no target was given
 
@@ -84,12 +87,13 @@ await report({ type: 'built', scoring });                                       
 
 | Rule / list | Owner | Derived readers |
 |---|---|---|
-| Every tunable number | `convex/domain/tuning.ts` | Condition Check threshold, Fit weights, candidate/shown counts, pace km/h, length classes, run timeout |
-| JKC breeds | `JKC_BREEDS` in `convex/domain/breeds.ts` | `BreedId`, `isJkcBreedId` (the boundary check), `searchBreeds`, `breedLabel` (UI and Jev) |
+| Every product-tuning number | `convex/domain/tuning.ts` | Condition Check threshold, Fit weights, candidate/shown counts, pace km/h, length classes, run timeout. Engineering limits stay next to their code: `MAX_PATH_POINTS` (storage cap), the per-call timeouts, `DEVICE_LOCATION_TIMEOUT_MS`. |
+| JKC breeds | `JKC_BREEDS` and `BREED_CHOICE_LABELS` (ミックス / その他) in `convex/domain/breeds.ts` | `BreedId`, `isJkcBreedId` (the boundary check), `searchBreeds`, `breedLabel` (UI and Jev) |
+| Default Point | `DEFAULT_POINT` and `DEFAULT_POINT_NAME` (東京駅) in `convex/domain/courseConditions.ts` | `resolveStartPoint`, the start-point note, the Start Point field's hint |
 | Moods | `MOODS` in `convex/domain/courseConditions.ts` | `Mood`, `moodValidator`, chip order and labels, Jev state. Icons are a `Record<Mood, SymbolViewProps['name']>` in `mood-chips.tsx`, so a new Mood without an icon fails the build. |
 | UI copy for codes (reason, warning, failure, working step, start-point note) | `src/features/course-display/labels.ts` | Each table is a `Record` over the domain union, so a new variant fails the build. |
 | "Plainly invalid" limits | `CONDITION_LIMITS`, `DOG_PROFILE_LIMITS` | Valibot draft schemas (app) and `findConditionProblems` / `findOwnerProblems` (server). Two readers, one table. |
-| Form output shape | Convex `Infer<>` types | `parseConditionsDraft` / `parseDogProfileDraft` declare `FormResult<CourseConditions / Owner>`, so a Valibot schema that drifts from the validator stops compiling. |
+| Form output shape | Convex `Infer<>` types | `parseConditionsDraft` / `parseDogProfileDraft` declare `FormResult<CourseConditions / Owner>`. Once each schema ends in its `vb.transform` (the conditions one already does), a schema that drifts from the validator stops compiling. |
 | Start Point fallback chain | `resolveStartPoint` (pure) | The app adds `deviceLocation` only when the field is empty. The server adds `previous`: the latest proposal whose Start Point was not the Default Point. It is never stored separately. |
 | Pace → km/h, length class → metres | `convex/domain/walk.ts` (values in `tuning.ts`) | judge, run, view |
 | Jev wire format and key | `convex/judge/internal/jev.ts` | Nobody else |
@@ -112,7 +116,7 @@ await report({ type: 'built', scoring });                                       
 - **`internal/` is unimportable from outside its module.** Feature 0 adds an oxlint `no-restricted-imports` pattern for `**/judge/internal/*` and `**/courseBuilder/internal/*`, with an override that allows them inside their own directory. `src/**` may import only `@/convex/_generated/*` and `@/convex/domain/*`.
 - **`convex/domain/`** is pure and depends only on `convex/values` (plus types from `_generated`). It is the one directory the app may import besides `_generated`.
 - **Validation lives only at the boundaries:**
-  - Valibot: the form drafts (`src/lib/parse-form.ts` is the one helper), and the Jev, ORS and Overpass responses.
+  - Valibot: the form drafts (`src/lib/parse-form.ts` is the one helper), and the Jev, ORS and Overpass responses. `askJev` reports any asked question without an answer as `malformed`, so a partial Jev answer becomes the documented fallback, never a crash.
   - Convex `v`: function arguments and storage.
   - The shared limits: range and catalog checks inside public mutations.
 
@@ -123,7 +127,7 @@ The app sees six functions:
 - `owners.mine` and `owners.save`
 - `proposals.current`, `proposals.request`, `proposals.proceed` and `proposals.retry`
 
-It also sees three hooks: `useSession`, `useRequestProposal` and `useProposal`. Behind them sit the Jev, ORS and Overpass calls, the Condition Check thresholds, the length policy, ranking and weights, the fallbacks, fencing, the watchdog, and the server half of the Start Point chain. The app never coordinates two calls to finish one operation, and it holds no proposal id: an app restart loses nothing.
+It also sees three hooks: `useSession`, `useRequestProposal` and `useProposal`, plus Convex Auth's `useAuthActions` for sign-in and sign-out. Behind them sit the Jev, ORS and Overpass calls, the Condition Check thresholds, the length policy, ranking and weights, the fallbacks, fencing, the watchdog, and the server half of the Start Point chain. The app never coordinates two calls to finish one operation, and it holds no proposal id: an app restart loses nothing.
 
 ### What it deliberately does not do
 
@@ -138,7 +142,7 @@ It also sees three hooks: `useSession`, `useRequestProposal` and `useProposal`. 
 
 ```
 convex/
-  schema.ts                  authTables + owners(by_user) + proposals(by_owner); fields come from domain/
+  schema.ts                  authTables + owners(by_user) + proposals(by_user); fields come from domain/
   auth.ts                    convexAuth({ providers: [Password] }) exports; requireOwnerId(ctx)
   auth.config.ts             Convex Auth JWT issuer config
   http.ts                    auth.addHttpRoutes
@@ -192,13 +196,19 @@ Copy a feature's files from `docs/blueprint/sketch/` to the same paths, then fil
 
 | Feature | Creates / fills | Edits existing | Removes |
 |---|---|---|---|
-| **0 Starter cleanup** | `src/app/(tabs)/_layout.tsx`, placeholder `(tabs)/index.tsx` and `(tabs)/profile.tsx` | `app.json` (drop `web`), `package.json` (drop the `web` and `reset-project` scripts; drop `react-native-web` / `react-dom` if `expo-doctor` agrees), `src/constants/theme.ts` (drop the `@/global.css` import and the web font branch), `.oxlintrc.json` (the `internal/` and `src → convex` import rules above) | `src/app/index.tsx`, `src/app/explore.tsx`, `src/components/{app-tabs,app-tabs.web,web-badge,external-link,hint-row,animated-icon.web}.tsx`, `animated-icon.module.css`, `ui/collapsible.tsx`, `src/hooks/use-color-scheme.web.ts`, `src/global.css`, `scripts/reset-project.js`, `assets/images/tabIcons/*`, `assets/images/{expo-badge*,expo-logo,react-logo*,logo-glow,tutorial-web,favicon}.png` |
-| **1 Account + Dog Profile** | `convex/{schema,auth,auth.config,http,owners}.ts` (schema: `owners` table), `convex/domain/{tuning,breeds,dogProfile}.ts`, `src/features/account/*`, `src/features/dog-profile/*`, `src/lib/parse-form.ts`, `src/app/{sign-in,onboarding}.tsx`, the body of `(tabs)/profile.tsx` | `src/app/_layout.tsx` (AppProviders + RootStack), `package.json` (dependencies below) | — |
-| **2 Course Conditions** | `convex/domain/courseConditions.ts`, `src/features/course-conditions/*` (`use-request-proposal.ts` is wired in Feature 3), `src/app/conditions.tsx`, the Home button in `(tabs)/index.tsx` | `root-stack.tsx`: one `Stack.Screen name="conditions"` line (formSheet) | — |
-| **3 Course proposal** | `convex/domain/{walk,proposal,ranking,proposalView}.ts`, `convex/proposals.ts`, `convex/proposalRuns.ts`, `convex/judge/**`, `convex/courseBuilder/**`, `use-request-proposal.ts` | `schema.ts` (add the `proposals` table) | — |
+| **0 Starter cleanup** | `src/app/(tabs)/_layout.tsx`, placeholder `(tabs)/index.tsx` and `(tabs)/profile.tsx` | `src/app/_layout.tsx` (stop importing `AppTabs`; render a plain `Stack` over `(tabs)`), `app.json` (drop `web`), `package.json` (drop the `web` and `reset-project` scripts; drop `react-native-web` / `react-dom` if `expo-doctor` agrees), `src/constants/theme.ts` (drop the `@/global.css` import and the web font branch), `.oxlintrc.json` (the `internal/` and `src → convex` import rules above) | `src/app/index.tsx`, `src/app/explore.tsx`, `src/components/{app-tabs,app-tabs.web,web-badge,external-link,hint-row,animated-icon.web}.tsx`, `animated-icon.module.css`, `ui/collapsible.tsx`, `src/hooks/use-color-scheme.web.ts`, `src/global.css`, `scripts/reset-project.js`, `assets/images/tabIcons/*`, `assets/images/{expo-badge*,expo-logo,react-logo*,logo-glow,tutorial-web,favicon}.png` |
+| **1 Account + Dog Profile** | `convex/{schema,auth,auth.config,http,owners}.ts` (schema: `owners` table only), `convex/domain/{breeds,dogProfile}.ts`, `src/features/account/*`, `src/features/dog-profile/*`, `src/lib/parse-form.ts`, `src/app/{sign-in,onboarding}.tsx`, the body of `(tabs)/profile.tsx` | `src/app/_layout.tsx` (AppProviders + RootStack, after Feature 0), `package.json` (dependencies below) | — |
+| **2 Course Conditions** | `convex/domain/courseConditions.ts`, `src/features/course-conditions/*` (except `use-request-proposal.ts`), `src/app/conditions.tsx` without the `?revise` prefill | `root-stack.tsx` (one `Stack.Screen name="conditions"` line, after Feature 1), the Home button in `(tabs)/index.tsx` | — |
+| **3 Course proposal** | `convex/domain/{tuning,walk,proposal,ranking,proposalView}.ts`, `convex/proposals.ts`, `convex/proposalRuns.ts`, `convex/judge/**`, `convex/courseBuilder/**`, `use-request-proposal.ts` | `schema.ts` (add the `proposals` table), `conditions.tsx` (add the `?revise` prefill from `proposals.current`) | — |
 | **4 Course display** | `src/features/course-display/*`, the proposal part of `(tabs)/index.tsx` | `app.json` (`["react-native-maps", { "androidGoogleMapsApiKey": … }]`) | — |
 
-Features 0, 1 and 2 touch disjoint files and can run in parallel. Feature 2 can merge before Feature 3 by stubbing the submit. Feature 4 needs `ProposalView` from Feature 3.
+Features 0, 1 and 2 mostly create disjoint files and can be built in parallel, but they meet at three edit points, which must land in order:
+
+- `src/app/_layout.tsx`: Feature 0, then Feature 1.
+- `root-stack.tsx`: Feature 1 creates it, then Feature 2 adds one line.
+- `(tabs)/index.tsx`: Feature 0 creates a placeholder, Feature 2 adds the button, Feature 4 adds the proposal panel.
+
+Feature 2 can merge before Feature 3 by stubbing the submit. Feature 3 needs Feature 1 (`owners`) and Feature 2 (`courseConditions.ts`). Feature 4 needs `ProposalView` from Feature 3.
 
 Feature 1 must also replace the 10 sample breeds in `JKC_BREEDS` with the full JKC list (about 200), keeping ids stable. Until that is done, the breed picker only shows the samples.
 
@@ -248,6 +258,7 @@ That agreement is strong evidence for the shape. The arena therefore picked a ba
 | C10 | Fixed ORS seeds | Retries are repeatable. |
 | C1 | The `internal/` folder convention, plus an oxlint rule | Internals become unimportable from outside their module (red flag: importable internals). |
 | Judge | `RUN_TIMEOUT_MS` raised from 90 s to 3 min | Five ORS calls, Overpass and two Jev requests can exceed 90 s. |
+| Verifier | Per-call timeouts; `proceed` / `retry` only on the latest proposal; Too-much-load always asked; one owner for the ミックス / その他 and 東京駅 labels; `findOwnerId` as the only signed-out-safe identity read | Found in Phase F verification (see below). |
 
 **Rejected:**
 
@@ -269,6 +280,16 @@ That agreement is strong evidence for the shape. The arena therefore picked a ba
 
 **Dropouts:** none. All ten candidates produced a type-checking blueprint.
 
+**Verification (Phase F).** A separate Opus reviewer checked this synthesis against its own claims, the spec and the red flags. It found:
+
+- two runs could spend ORS quota at once (after a timeout, or when an older proposal was restarted)
+- an overstated "Features 0–2 are disjoint" claim
+- a missing Score wire variant
+- a load check that was skipped when no targets were given
+- two hand-synced labels
+
+All of these are fixed above. Two questions are left open below: the spacing of retries, and whether de-duplication may leave fewer than five candidates.
+
 ## Tradeoffs accepted
 
 - **A persisted proposal, a scheduler and a watchdog**, which add more moving parts than an action that returns its result. In exchange, confirm and retry resume without redoing work, progress is reactive, and a proposal survives the app being backgrounded.
@@ -277,6 +298,7 @@ That agreement is strong evidence for the shape. The arena therefore picked a ba
 - **Walking Pace is always asked in the Condition Check request**, even when Target Distance is given. In exchange, every time estimate uses the dog's own pace, and a resume never needs a second Jev round.
 - **Japanese labels for Mood and Breed live in `convex/domain/`**, because Jev needs them as much as the UI does. UI-only copy stays in the app, in `Record` tables.
 - **An Overpass failure degrades** (`surroundings: null`) instead of failing the proposal. Overpass is enrichment; the spec's "error + retry" applies to routing.
+- **De-duplication can leave fewer than 5 candidates.** Near-identical loops are dropped rather than shown twice. At least one loop is required; otherwise the proposal fails with `noLoopFound`.
 - **Home shows only the latest proposal.** Older ones stay in the table, unseen. They are needed to derive the previous Start Point, and there is no retention rule yet.
 - **A few bodies are real code, not stubs:** `proposalRuns.run`, `commit`, `startRun`, `record`, `applyOwnerEvent`, `useSession`, `useRequestProposal`, `useProposal`, `RootStack` and the Home switch. They are the type-checked call sites that prove the stubs compose. All the domain logic they call still throws `not implemented`.
 - **The sketch lives in `docs/blueprint/sketch/`, not at its real paths.** In exchange, the repo builds and lints cleanly until each feature copies its files in. This also keeps the hand-written `_generated` files and the colliding `/` routes out of the app.
@@ -292,6 +314,7 @@ That agreement is strong evidence for the shape. The arena therefore picked a ba
 
 - **ORS quota.** 2,000 requests a day and 40 a minute, at 5 calls per proposal, is about 8 proposals a minute app-wide. Is the in-flight dedupe enough at launch, or do we need a per-Owner cooldown or a global counter?
 - **Jev's wire shape for Choice and Score.** It is unknown. `internal/jev.ts` assumes a per-key distribution or probability, and computes a Score position from a level distribution if one is given.
+- **Retry spacing.** Retry after `routingUnavailable` (often an ORS 429) can be tapped at once, and each tap spends 5 calls. Do we want a short client-side cooldown on the retry button, or a server-side one?
 - **One Fit request for five courses.** Does it stay accurate and within Jev's limits? The fallback is five per-course requests, and only `judgeCourseFits` would change.
 - **No Mood.** When the Owner gives no Mood, we skip Mood Fit and rank by Body Fit alone. Should Today's Memo still drive a Mood Fit in that case?
 - **Retention.** Proposal documents accumulate, and they store device locations. Do we need a retention rule (for example a daily cron that keeps only each Owner's latest few) and a privacy note?

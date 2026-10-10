@@ -31,6 +31,7 @@ export type LatLng = Infer<typeof latLngValidator>;
 
 /** Tokyo Station. Used when nothing else gives a Start Point. */
 export const DEFAULT_POINT: LatLng = { latitude: 35.681236, longitude: 139.767125 };
+export const DEFAULT_POINT_NAME = '東京駅';
 
 /**
  * What the Owner entered. Every part is optional (GLOSSARY: Course Conditions).

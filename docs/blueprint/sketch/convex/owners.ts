@@ -6,9 +6,8 @@
  *   const save = useMutation(api.owners.save);
  *   await save({ owner: parsedForm });                     // onboarding AND Profile tab
  */
-import { getAuthUserId } from '@convex-dev/auth/server';
 import { mutation, query } from './_generated/server';
-import { requireOwnerId } from './auth';
+import { findOwnerId, requireOwnerId } from './auth';
 import { ownerValidator, type Owner } from './domain/dogProfile';
 
 /**
@@ -18,9 +17,9 @@ import { ownerValidator, type Owner } from './domain/dogProfile';
 export const mine = query({
   args: {},
   handler: async (ctx): Promise<Owner | null> => {
-    void getAuthUserId;
+    void findOwnerId;
     void ctx;
-    // TODO: userId = await getAuthUserId(ctx); null → null;
+    // TODO: userId = await findOwnerId(ctx); null → null;
     //       row = owners.by_user(userId).unique(); row ? { ownerName: row.ownerName, dog: row.dog } : null.
     throw new Error('not implemented');
   },

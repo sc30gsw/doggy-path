@@ -24,6 +24,7 @@ export type RankedCourses =
 export function rankCourses(scoring: CourseScoring, targetLengthM: number): RankedCourses {
   void scoring;
   void targetLengthM;
+  void weightedScore;
   void SHOWN_COURSE_COUNT;
   // TODO: sort as above, slice(0, SHOWN_COURSE_COUNT); for byFit attach
   //   reason = fit.mood !== null && fit.mood > fit.body ? 'mood' : 'body'
@@ -31,8 +32,8 @@ export function rankCourses(scoring: CourseScoring, targetLengthM: number): Rank
   throw new Error('not implemented');
 }
 
-/** Weighted score of one Fit. Exposed for tests of the weighting, not for callers. */
-export function weightedScore(fit: Fit): number {
+/** Weighted score of one Fit. Private: tests go through `rankCourses`. */
+function weightedScore(fit: Fit): number {
   void fit;
   // TODO: fit.mood === null ? fit.body : FIT_WEIGHTS.body * fit.body + FIT_WEIGHTS.mood * fit.mood
   throw new Error('not implemented');

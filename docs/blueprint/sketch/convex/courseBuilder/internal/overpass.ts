@@ -22,7 +22,7 @@ export async function fetchSurroundings(box: BoundingBox): Promise<Surroundings 
   // TODO: POST https://overpass-api.de/api/interpreter with [out:json][timeout:20];
   //       (way[leisure~"^(park|garden)$"](bbox); way[landuse~"^(grass|forest|recreation_ground)$"](bbox);
   //        way[highway~"^(trunk|primary|secondary)$"](bbox);); out geom;
-  //       User-Agent identifying the app (fair-use).
+  //       User-Agent identifying the app (fair-use); AbortSignal.timeout(25_000).
   throw new Error('not implemented');
 }
 

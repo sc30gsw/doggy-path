@@ -15,8 +15,9 @@
  * - `advance` is pure and total. Events that do not apply to the current phase return
  *   `null`, which callers treat as an idempotent no-op (double taps, late runs, watchdogs).
  *
- * Shared with the client only through `ProposalView` (see ./proposalView.ts); the client
- * never sees or switches on `ProposalState`.
+ * The client renders `ProposalView` (./proposalView.ts) and never sees or switches on
+ * `ProposalState`. It imports only the code unions `ConditionWarning` and `FailureReason`
+ * from here, as types, for its copy tables.
  */
 import { v, type Infer } from 'convex/values';
 

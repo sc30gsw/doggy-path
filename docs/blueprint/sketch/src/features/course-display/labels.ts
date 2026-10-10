@@ -2,7 +2,7 @@
  * Japanese copy for the proposal's server-side codes. Each table is a `Record` over the
  * domain union, so a new reason/warning/failure fails the build here until it has copy.
  */
-import type { ResolvedStartPoint } from '@/convex/domain/courseConditions';
+import { DEFAULT_POINT_NAME, type ResolvedStartPoint } from '@/convex/domain/courseConditions';
 import type { ConditionWarning, FailureReason } from '@/convex/domain/proposal';
 import type { ProposalStatus } from '@/convex/domain/proposalView';
 import type { FitKind } from '@/convex/domain/ranking';
@@ -36,5 +36,5 @@ export const START_POINT_NOTES: Record<ResolvedStartPoint['source'], string | nu
   chosen: null,
   device: '現在地から作りました',
   previous: '前回の開始地点から作りました',
-  default: '東京駅から作りました',
+  default: `${DEFAULT_POINT_NAME}から作りました`,
 };

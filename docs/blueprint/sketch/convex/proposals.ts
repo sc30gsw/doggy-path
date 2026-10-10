@@ -48,9 +48,9 @@ import { RUN_TIMEOUT_MS } from './domain/tuning';
 export const current = query({
   args: {},
   handler: async (ctx): Promise<ProposalView | null> => {
-    const ownerId = await requireOwnerId(ctx);
-    void ownerId;
-    // TODO: latest = proposals.by_owner(ownerId).order('desc').first();
+    const userId = await requireOwnerId(ctx);
+    void userId;
+    // TODO: latest = proposals.by_user(userId).order('desc').first();
     //       return latest === null ? null : toProposalView(latest).
     throw new Error('not implemented');
   },
@@ -63,7 +63,8 @@ export const current = query({
  *
  * Idempotent against double taps: while the Owner's latest proposal is still working
  * (checking / building), its id is returned and nothing new is scheduled, so a double tap
- * cannot spend ORS quota twice.
+ * cannot spend ORS quota twice. Home hides 「コースを提案してもらう」 while working, so this
+ * path only absorbs races, never a deliberate new request.
  *
  * `deviceLocation` is the client's best-effort current location, sent ONLY when the Owner
  * left Start Point empty. It is not part of `conditions`, so 「条件を直す」 shows the
@@ -76,17 +77,17 @@ export const request = mutation({
   },
   handler: async (ctx, args): Promise<Id<'proposals'>> => {
     void args;
-    const ownerId = await requireOwnerId(ctx);
-    void ownerId;
+    const userId = await requireOwnerId(ctx);
+    void userId;
     // TODO:
     //   problems = findConditionProblems(args.conditions); non-empty → throw ConvexError({ problems }).
-    //   owner = owners.by_user(ownerId).unique(); null → throw (onboarding gate bypassed).
-    //   latest = proposals.by_owner(ownerId).order('desc').first();
+    //   owner = owners.by_user(userId).unique(); null → throw (onboarding gate bypassed).
+    //   latest = proposals.by_user(userId).order('desc').first();
     //   if (latest && (latest.state.phase === 'checking' || latest.state.phase === 'building')) return latest._id;
-    //   previous = first proposal by_owner (desc) whose startPoint.source !== 'default', ?.startPoint.point
+    //   previous = first proposal by_user (desc) whose startPoint.source !== 'default', ?.startPoint.point
     //     (a Default Point is never "previous": the chain would fall through to it anyway).
     //   startPoint = resolveStartPoint({ chosen: args.conditions.startPoint, deviceLocation: args.deviceLocation, previous })
-    //   id = insert({ ownerId, conditions, startPoint, dog: owner.dog, attempt: 1, state: INITIAL_TRANSITION.next })
+    //   id = insert({ userId, conditions, startPoint, dog: owner.dog, attempt: 1, state: INITIAL_TRANSITION.next })
     //   await startRun(ctx, id, 1)
     throw new Error('not implemented');
   },
@@ -154,11 +155,20 @@ export const record = internalMutation({
 
 // ── Private helpers (real wiring: the protocol's call sites) ──────────────────────────
 
-/** Owner-originated events: ownership-checked, phase-checked by `advance`, not fenced. */
+/**
+ * Owner-originated events: only on the Owner's CURRENT (latest) proposal, phase-checked by
+ * `advance`, not fenced. An older proposal is never restarted, so a stale screen cannot run
+ * two pipelines at once.
+ */
 async function applyOwnerEvent(ctx: MutationCtx, proposalId: Id<'proposals'>, event: OwnerEvent) {
-  const ownerId = await requireOwnerId(ctx);
-  const doc = await ctx.db.get(proposalId);
-  if (doc === null || doc.ownerId !== ownerId) throw new Error('Proposal not found');
+  const userId = await requireOwnerId(ctx);
+  const latest = await ctx.db
+    .query('proposals')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .order('desc')
+    .first();
+  if (latest === null || latest._id !== proposalId) return; // superseded or foreign: no-op
+  const doc = latest;
   const transition = advance(doc.state, event);
   if (transition !== null) await commit(ctx, doc, transition); // null = double tap: no-op
 }

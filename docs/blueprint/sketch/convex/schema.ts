@@ -28,7 +28,8 @@ export default defineSchema({
    * (derived, not stored elsewhere).
    */
   proposals: defineTable({
-    ownerId: v.id('users'),
+    /** The Convex Auth user id, like `owners.userId`. */
+    userId: v.id('users'),
     conditions: courseConditionsValidator,
     startPoint: resolvedStartPointValidator,
     /**
@@ -39,5 +40,5 @@ export default defineSchema({
     /** Fencing token. Bumped each time a run is scheduled; stale runs' events are dropped. */
     attempt: v.number(),
     state: proposalStateValidator,
-  }).index('by_owner', ['ownerId']),
+  }).index('by_user', ['userId']),
 });

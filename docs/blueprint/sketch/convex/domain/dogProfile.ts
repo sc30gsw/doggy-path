@@ -10,7 +10,7 @@
  */
 import { v, type Infer } from 'convex/values';
 
-import { JKC_BREEDS, breedValidator } from './breeds';
+import { BREED_CHOICE_LABELS, JKC_BREEDS, breedValidator } from './breeds';
 
 export const sexValidator = v.union(v.literal('male'), v.literal('female'));
 
@@ -66,7 +66,7 @@ export function breedLabel(breed: Breed): string {
     case 'jkc':
       return JKC_BREEDS.find((entry) => entry.id === breed.id)?.ja ?? breed.id;
     case 'mixed':
-      return 'ミックス';
+      return BREED_CHOICE_LABELS.mixed;
     case 'other':
       return breed.text;
   }

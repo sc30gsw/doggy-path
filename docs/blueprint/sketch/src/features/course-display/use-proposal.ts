@@ -9,7 +9,7 @@
 import { useMutation, useQuery } from 'convex/react';
 
 import { api } from '@/convex/_generated/api';
-import type { CourseConditions, ResolvedStartPoint } from '@/convex/domain/courseConditions';
+import type { ResolvedStartPoint } from '@/convex/domain/courseConditions';
 import type { ConditionWarning, FailureReason } from '@/convex/domain/proposal';
 import type { ShownCourses } from '@/convex/domain/proposalView';
 
@@ -21,8 +21,6 @@ export type ProposalScreen =
   | {
       phase: 'needsConfirmation';
       warnings: ConditionWarning[];
-      /** For 「条件を直す」: the sheet reopens prefilled with these. */
-      conditions: CourseConditions;
       /** 「このまま作る」. */
       proceed: () => Promise<null>;
     }
@@ -45,7 +43,6 @@ export function useProposal(): ProposalScreen {
       return {
         phase: 'needsConfirmation',
         warnings: status.warnings,
-        conditions: view.conditions,
         proceed: () => proceed({ proposalId: view.id }),
       };
     case 'ready':

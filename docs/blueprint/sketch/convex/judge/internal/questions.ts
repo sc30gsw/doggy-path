@@ -56,8 +56,8 @@ export type ConditionQuestions = {
   lengthClass?: ChoiceQuestion<LengthClass>;
   /** Asked only when both Target Distance and Target Time are present. */
   targetsConsistent?: NoulQuestion;
-  /** Asked only when at least one target is present. */
-  tooMuchLoad?: NoulQuestion;
+  /** Always asked: a Today's Memo like 「足を痛めている」 matters even with no targets. */
+  tooMuchLoad: NoulQuestion;
 };
 
 /**
@@ -139,7 +139,10 @@ export function fitQuestions(courses: readonly Course[], hasMood: boolean): FitQ
   throw new Error('not implemented');
 }
 
-/** One course's Fit out of the shared answers. A missing body answer is `malformed` upstream. */
+/**
+ * One course's Fit out of the shared answers. `askJev` already reported a missing answer as
+ * `malformed` (→ the `byLength` fallback), so the throw below is unreachable in practice.
+ */
 export function interpretFit(answers: JevAnswers<FitQuestions>, courseKey: string): Fit {
   const body = answers[bodyFitKey(courseKey)];
   if (body === undefined) throw new Error(`Jev answered no Body Fit for ${courseKey}`);

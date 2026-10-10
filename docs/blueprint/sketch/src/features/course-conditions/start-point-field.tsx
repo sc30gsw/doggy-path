@@ -12,6 +12,6 @@ export function StartPointField(props: {
   // TODO: 「現在地」 → getDeviceLocation() → onChange(point) (toast when null);
   //       MapView (initialRegion = value ?? DEFAULT_POINT) onLongPress → onChange(coordinate);
   //       Marker at value; 「クリア」 → onChange(null). Hint text when empty:
-  //       「未指定のときは現在地 → 前回の開始地点 → 東京駅 の順に使います」.
+  //       `未指定のときは現在地 → 前回の開始地点 → ${DEFAULT_POINT_NAME} の順に使います`.
   throw new Error('not implemented');
 }

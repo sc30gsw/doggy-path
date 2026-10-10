@@ -31,6 +31,10 @@ _Avoid_: Notes, remarks (備考)
 A single loop that starts and ends at the Start Point. The unit the app proposes.
 _Avoid_: Route, path
 
+**Proposal**:
+One request for Walk Courses, from 「この条件で提案」 to the courses shown (or a failure). It may pause for a Condition Check warning, and the Owner's latest Proposal is the one Home shows.
+_Avoid_: Request, job, search
+
 **Course Candidate**:
 A Walk Course produced while building a proposal. Candidates are ranked against today's situation, and the best ones are shown to the Owner.
 _Avoid_: Option, route candidate

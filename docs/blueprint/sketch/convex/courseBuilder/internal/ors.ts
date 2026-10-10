@@ -10,6 +10,9 @@ import type { LatLng } from '../../domain/courseConditions';
 /** ORS returns loops longer than requested; ask for this fraction of the target. */
 export const REQUESTED_LENGTH_FACTOR = 0.85;
 
+/** Per-request timeout. 5 parallel loops + Overpass + 2 Jev calls must fit in RUN_TIMEOUT_MS. */
+export const ORS_TIMEOUT_MS = 30_000;
+
 /** A loop as routed, before surroundings are known. Segment fractions come from `extra_info`. */
 export type RoutedLoop = {
   /** Closed: first point equals last point. */
@@ -36,10 +39,14 @@ export async function requestRoundTrip(input: {
 }): Promise<RoutedLoop | null> {
   void input;
   void orsResponseSchema;
+  void ORS_TIMEOUT_MS;
   // TODO: body = { coordinates: [[lng, lat]], elevation: true,
   //                extra_info: ['surface', 'waycategory', 'steepness'],
   //                options: { round_trip: { length, points: 4, seed } } };
   //       header Authorization = process.env.ORS_API_KEY;
+  //       fetch with AbortSignal.timeout(ORS_TIMEOUT_MS): a hung call must end long before
+  //       RUN_TIMEOUT_MS, so a run the watchdog failed has stopped spending quota by the
+  //       time the Owner can retry;
   //       vb.safeParse(orsResponseSchema, json); map [lng, lat, ele] → LatLng;
   //       unpavedShare = Σ distance of segments whose surface/waycategory is unpaved / total.
   throw new Error('not implemented');

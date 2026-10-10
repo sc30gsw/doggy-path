@@ -40,6 +40,9 @@ export const JKC_BREEDS = [
 
 export type BreedId = (typeof JKC_BREEDS)[number]['id'];
 
+/** Labels of the two non-JKC choices, shown in the picker and used by `breedLabel`. */
+export const BREED_CHOICE_LABELS = { mixed: 'ミックス', other: 'その他' } as const;
+
 const JKC_BREED_IDS: ReadonlySet<string> = new Set(JKC_BREEDS.map((breed) => breed.id));
 
 /** The boundary check for stored ids (they are `v.string()` in the schema). */

@@ -89,7 +89,9 @@ export const askJev: AskJev = async (state, questions) => {
   //   2. body = toWireRequest(state, questions) (drop undefined entries).
   //   3. fetch with AbortSignal.timeout(15_000); non-2xx → http; throw → network.
   //   4. vb.safeParse(wireResponseSchema, json) → malformed on failure.
-  //   5. readAnswers(questions, parsed): per question kind,
+  //   5. readAnswers(questions, parsed): every asked (non-undefined) question must have an
+  //      answer of its kind, else malformed (so callers can index answers without checks);
+  //      per question kind,
   //        choice: distribution keys must equal option ids (else malformed); normalise to sum 1;
   //                likeliest = argmax.
   //        noul:   probability in [0,1].
@@ -108,6 +110,7 @@ const wireResponseSchema = vb.object({
     vb.union([
       vb.object({ distribution: vb.record(vb.string(), vb.number()) }),
       vb.object({ probability: vb.number() }),
+      vb.object({ position: vb.number() }),
     ]),
   ),
 });
