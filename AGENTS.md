@@ -61,3 +61,17 @@ Rules here come from operator corrections. When the operator corrects an agent, 
 | Convex code follows the Convex Best Practices: typed `env` from `convex.config.ts`, thin public functions over `convex/model/`, `.withIndex` instead of `.filter`, no unbounded `.collect`, table names on `ctx.db` calls, access control in every public function, only `internal.*` scheduled. | Partly: the blueprint sketch follows them (`docs/blueprint/RATIONALE.md`, "Best practices"). Feature 0 adds oxlint's `@convex-dev/eslint-plugin` rules (via `jsPlugins`) and type-aware `no-floating-promises`. `explicit-table-ids` and `no-collect-in-query` need type information oxlint's JS plugins lack, so review enforces them. |
 | Jev prompts (`instructions`, `criteria`) are English; the Owner's text and the UI stay Japanese. Keep arithmetic out of Jev and give it numbers as words. | ADR 0005 and the code in `convex/judge/internal/questions.ts`, the nearest example. Nothing fails. |
 | Code carries no narration or pseudocode comments; constraints live in names, types and data. Run `/no-comments` before opening a PR. | Nothing fails. pstack's `/no-comments` (Comment Sicko) is the check. |
+
+<!-- convex-ai-start -->
+
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read
+`convex/_generated/ai/guidelines.md` first** for important guidelines on
+how to correctly use Convex APIs and patterns. The file contains rules that
+override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running
+`npx convex ai-files install`.
+
+<!-- convex-ai-end -->

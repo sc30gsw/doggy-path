@@ -92,7 +92,7 @@ launch() {
     exit 1
   fi
 
-  tmux_cmd new-session -d -s "$session" -c "$ROOT" -- bash -lc "cd '$ROOT' && CI=1 EXPO_NO_TELEMETRY=1 bunx expo start --host localhost --port '$PORT'"
+  tmux_cmd new-session -d -s "$session" -c "$ROOT" -- bash -lc "cd '$ROOT' && CI=1 EXPO_NO_TELEMETRY=1 NODE_OPTIONS=--dns-result-order=ipv4first bunx expo start --host localhost --port '$PORT'"
   local attempt
   for attempt in $(seq 1 45); do
     if curl --silent --show-error --max-time 2 "$(metro_url "$PORT")/status" >"$evidence/metro-status.txt" 2>"$evidence/metro-status.err"; then
