@@ -44,8 +44,17 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ### Issue tracker
 
-Issue は GitHub Issues（`sc30gsw/doggy-path`、`gh` CLI）で管理する。詳細は `docs/agents/issue-tracker.md` を参照。
+Issues live in GitHub Issues (`sc30gsw/doggy-path`, via the `gh` CLI). See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
-single-context（ルートに `GLOSSARY.md` と `docs/adr/`）。詳細は `docs/agents/domain.md` を参照。
+Single context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Rules and what enforces them
+
+Rules here come from operator corrections. When the operator corrects an agent, fix the mistake and add or update a row. A rule with nothing enforcing it that gets broken again must be fixed at a higher level (architecture, types, lint, test) in the same change. Drop a row once its mistake can no longer happen.
+
+| Rule | Enforced by |
+|---|---|
+| Write docs, ADRs, the glossary, code comments and PR text in English. Japanese appears only as UI copy (quoted screen labels). | Nothing fails. Every agent-facing file is English, so the nearest example an agent copies is English. |
+| Run feature and design work through pstack (`/poteto-mode` Feature playbook: `architect` with `arena`, then `/no-comments`), not straight to code. | The `pstack` plugin enabled in `.claude/settings.json`. Open: its `pstack-claude` marketplace is not declared there, so a session that has not installed it locally (cloud sessions, new teammates) loads no pstack skills. |
