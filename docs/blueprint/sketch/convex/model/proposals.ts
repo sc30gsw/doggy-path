@@ -12,7 +12,7 @@ import {
 } from '../domain/courseConditions';
 import type { DogProfile } from '../domain/dogProfile';
 import {
-  INITIAL_TRANSITION,
+  INITIAL_STATE,
   advance,
   isWorking,
   type Assessment,
@@ -47,7 +47,11 @@ export async function currentView(
   return latest === null ? null : toProposalView(latest);
 }
 
-/** While the Owner's latest proposal is working, returns its id and schedules nothing. */
+export type RequestResult = {
+  kind: 'started' | 'alreadyWorking';
+  proposalId: Id<'proposals'>;
+};
+
 export async function requestProposal(
   ctx: MutationCtx,
   {
@@ -55,14 +59,16 @@ export async function requestProposal(
     conditions,
     deviceLocation,
   }: { userId: Id<'users'>; conditions: CourseConditions; deviceLocation: LatLng | undefined },
-): Promise<Id<'proposals'>> {
+): Promise<RequestResult> {
   const problems = findConditionProblems(conditions);
   if (problems.length > 0) throw new ConvexError({ kind: 'invalidConditions', problems });
   const owner = await loadOwner(ctx, { userId });
   if (owner === null) throw new ConvexError({ kind: 'notOnboarded' });
 
   const latest = await latestProposal(ctx, { userId });
-  if (latest !== null && isWorking(latest.state)) return latest._id;
+  if (latest !== null && isWorking(latest.state)) {
+    return { kind: 'alreadyWorking', proposalId: latest._id };
+  }
 
   const now = Date.now();
   if (await reachedDailyCap(ctx, { userId, now })) {
@@ -81,25 +87,23 @@ export async function requestProposal(
     startPoint,
     dogSnapshot: owner.dog,
     attempt,
-    state: INITIAL_TRANSITION.next,
+    state: INITIAL_STATE,
   });
   await startRun(ctx, { proposalId, attempt });
   await dropProposalsBeyondRetention(ctx, { userId });
-  return proposalId;
+  return { kind: 'started', proposalId };
 }
 
-/** Acts only on the Owner's latest proposal, so a stale screen cannot restart an older one. */
-export async function applyOwnerEvent(
+export async function applyOwnerEventToLatest(
   ctx: MutationCtx,
   { userId, proposalId, event }: { userId: Id<'users'>; proposalId: Id<'proposals'>; event: OwnerEvent },
 ): Promise<void> {
   const latest = await latestProposal(ctx, { userId });
   if (latest === null || latest._id !== proposalId) return;
   const transition = advance({ state: latest.state, event, now: Date.now() });
-  if (transition !== null) await commit(ctx, { doc: latest, transition });
+  if (transition.kind === 'advanced') await commit(ctx, { doc: latest, transition });
 }
 
-/** Events from a stale attempt (an old run, or a watchdog after the run reported) are dropped. */
 export async function recordRunEvent(
   ctx: MutationCtx,
   { proposalId, attempt, event }: { proposalId: Id<'proposals'>; attempt: number; event: RunEvent },
@@ -107,7 +111,7 @@ export async function recordRunEvent(
   const doc = await ctx.db.get('proposals', proposalId);
   if (doc === null || doc.attempt !== attempt) return;
   const transition = advance({ state: doc.state, event, now: Date.now() });
-  if (transition !== null) await commit(ctx, { doc, transition });
+  if (transition.kind === 'advanced') await commit(ctx, { doc, transition });
 }
 
 export async function loadRunInput(
@@ -184,7 +188,7 @@ async function dropProposalsBeyondRetention(
 
 async function commit(
   ctx: MutationCtx,
-  { doc, transition }: { doc: Doc<'proposals'>; transition: Transition },
+  { doc, transition }: { doc: Doc<'proposals'>; transition: Extract<Transition, { kind: 'advanced' }> },
 ): Promise<void> {
   const attempt = transition.startRun ? doc.attempt + 1 : doc.attempt;
   await ctx.db.patch('proposals', doc._id, { state: transition.next, attempt });

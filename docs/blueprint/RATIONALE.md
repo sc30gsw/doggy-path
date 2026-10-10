@@ -84,9 +84,9 @@ await report({ type: 'built', scoring });                                       
   - `conditions`, as entered. Within them, `chosenStartPoint` is only what the Owner picked.
   - the resolved `startPoint`, with its `source`
   - `dogSnapshot`: the Dog Profile as it was at request time. Runs, confirm and retry all judge this snapshot, so an edit mid-build cannot mix two dogs into one result.
-- **`advance({ state, event, now }) → Transition | null`** is the whole lifecycle: one pure, total reducer, written out as code. `now` comes from the calling mutation, never from a query.
-  - A `null` result is an idempotent no-op, which absorbs double taps, late runs and watchdogs.
-  - A transition with `startRun: true` makes `commit` bump `attempt` and schedule two things: the run, and a watchdog. The watchdog is the same `record` mutation with `{ failed: timedOut }`, scheduled `RUN_TIMEOUT_MS` later.
+- **`advance({ state, event, now }) → Transition`** is the whole lifecycle: one pure, total reducer, written out as code. `now` comes from the calling mutation, never from a query.
+  - `{ kind: 'ignored' }` is an idempotent no-op, which absorbs double taps, late runs, watchdogs and retries inside the cooldown.
+  - An `advanced` transition with `startRun: true` makes `commit` bump `attempt` and schedule two things: the run, and a watchdog. The watchdog is the same `record` mutation with `{ failed: timedOut }`, scheduled `RUN_TIMEOUT_MS` later.
 - **Fencing.** Runs report through `proposals.record({ proposalId, attempt, event })`, and events with a stale attempt are dropped.
   - Runs never write the database. `convex/model/proposals.ts` is the only writer of the table, and `commit` is its only patch.
   - `proceed` and `retry` act only on the Owner's latest proposal, so a stale screen cannot restart an older one next to a new run.
@@ -100,7 +100,7 @@ await report({ type: 'built', scoring });                                       
 
   `targetLengthM({ length, pace })` is derived and never stored.
 - **`CourseScoring`** is `{ kind: 'byFit', scored: { course, fit }[] } | { kind: 'byLength', courses }`. Either every course has a Fit or none does. One Jev request scores all five courses, and `readAnswers` treats a missing answer as `malformed`, so this holds by construction.
-- **`Fit`** is `{ body, mood, unsuitable }`: two Score positions and one Noul probability. Weighted scores trade strengths against weaknesses, so a clear problem (hills for a dog with bad joints) is asked separately as `unsuitable`, and ranking puts unsuitable courses last whatever their weighted score.
+- **`Fit`** is `{ bodyPositionTowardBest, moodPositionTowardBest, unsuitableProbability }`: two Score positions and one Noul probability. Weighted scores trade strengths against weaknesses, so a clear problem (hills for a dog with bad joints) is asked separately as `unsuitable`, and ranking puts unsuitable courses last whatever their weighted score.
 - **Ranking happens at read time.** `proposals.current` calls `toProposalView`, which calls `rankCourses({ scoring, targetLengthM })`.
   - `FIT_WEIGHTS` and `SHOWN_COURSE_COUNT` live in `convex/domain/tuning.ts`. A weight change takes effect on the next deploy for every stored proposal, with no Jev call and no migration.
   - The reason label (the stronger of Body Fit and Mood Fit) and the `unsuitable` flag are derived in the same place.
@@ -108,7 +108,7 @@ await report({ type: 'built', scoring });                                       
 - **`Course`** is provider-neutral:
   - key and path (at most `MAX_PATH_POINTS`)
   - distance, ascent and unpaved share
-  - `surroundings`: `{ greenShare, mainRoadShare }`, or `null` if Overpass failed
+  - `surroundings`: `{ kind: 'known', greenShare, mainRoadShare }`, or `{ kind: 'unknown' }` if Overpass failed
 
   The time estimate is not stored. It is derived from the distance and `assessment.pace`.
 
@@ -186,7 +186,8 @@ convex/
   proposalRuns.ts            internal action run: phase → judge | courseBuilder + judge → record
   model/                     ctx helpers (server-only)
     owners.ts                findOwnerId, requireOwnerId, loadOwner, saveOwner (only writer of owners)
-    proposals.ts             currentView, requestProposal, applyOwnerEvent, recordRunEvent, loadRunInput,
+    proposals.ts             currentView, requestProposal (→ started | alreadyWorking), applyOwnerEventToLatest,
+                             recordRunEvent, loadRunInput,
                              commit, startRun (only writer of proposals)
   domain/                    PURE, shared with the app (imports only convex/values + _generated types)
     tuning.ts                every product-tuning number (placeholders until the evals in convex/judge/evals/)
@@ -284,7 +285,7 @@ Feature 1 must also replace the 10 sample breeds in `JKC_BREEDS` with the full J
 | Avoid sequential `ctx.runQuery` / `ctx.runMutation` in actions | `proposalRuns.run` does one `loadRun`, then external calls, then one `record`. The external side effect between them is the page's documented exception. |
 | Sparing `ctx.run*` in queries and mutations | Not used. |
 | Table name on `ctx.db` calls | `ctx.db.get('proposals', id)`, `ctx.db.patch('proposals', …)`, `ctx.db.replace('owners', …)`. |
-| No `Date.now()` in queries | None. `Date.now()` and `new Date()` appear only in mutations (`saveOwner`, `requestProposal`, `applyOwnerEvent`, `recordRunEvent`) and actions (`proposalRuns.run`, `askJev`). The retry countdown is computed in the app from `retryableAt`. |
+| No `Date.now()` in queries | None. `Date.now()` and `new Date()` appear only in mutations (`saveOwner`, `requestProposal`, `applyOwnerEventToLatest`, `recordRunEvent`) and actions (`proposalRuns.run`, `askJev`). The retry countdown is computed in the app from `retryableAt`. |
 | Typed `env` from `convex.config.ts` | `defineApp({ env })` declares every variable, and code reads `env` from `_generated/server`. There is no `process.env`. This reverses the arena's earlier rejection of `defineApp({ env })` as "beta": the Convex best practices recommend it. |
 
 ### TypeScript (pstack `typescript-best-practices`)
@@ -369,7 +370,7 @@ These are the specs for the bodies that still throw `not implemented`. They live
   - Fit questions carry their course inside a structured `instructions` object, and `state` holds only `{ dog, today }`, because Jev does worse with indirection and with state full of other candidates.
   - Per course: a Body Fit Score, a Mood Fit Score only with a Mood, and an `unsuitable` Noul. Five courses make at most 15 questions in one request, well within the 64k-token context.
 - **Jev failure logging:** log the `JevFailure` for tuning, and never surface it to the Owner.
-- **Daily cap and retention** are written in `model/proposals.ts`: `request` refuses with `ConvexError({ kind: 'dailyLimitReached' })` once the Owner has `DAILY_PROPOSAL_CAP` proposals in the last `DAILY_PROPOSAL_WINDOW_MS` (a double tap on an in-flight proposal still returns its id first), and each new proposal deletes the one beyond `RETAINED_PROPOSAL_COUNT`. Retries are not counted; the cooldown limits them.
+- **Daily cap and retention** are written in `model/proposals.ts`: `request` refuses with `ConvexError({ kind: 'dailyLimitReached' })` once the Owner has `DAILY_PROPOSAL_CAP` proposals in the last `DAILY_PROPOSAL_WINDOW_MS` (a double tap on an in-flight proposal still returns `{ kind: 'alreadyWorking', proposalId }` first), and each new proposal deletes the one beyond `RETAINED_PROPOSAL_COUNT`. Retries are not counted; the cooldown limits them.
 
 ### Account and Dog Profile (Feature 1)
 
@@ -471,7 +472,7 @@ That agreement is strong evidence for the shape. The arena therefore picked a ba
 
 | From | Rejected | Why |
 |---|---|---|
-| C3, C10 | Fail the proposal when Overpass fails | The spec makes only routing fatal, so Overpass degrades to `surroundings: null`. |
+| C3, C10 | Fail the proposal when Overpass fails | The spec makes only routing fatal, so Overpass degrades to unknown surroundings. |
 | C5 | Mark the result "unjudged" on an Overpass failure | It would show 「おすすめ順ではありません」 while Jev is up. |
 | C7, C9 | A separate `courseCandidates` table | Candidates are written once and read as a set, so the extra table adds a join and partial-write states. |
 | C7 | Stage-per-recorder mutations | Split ownership of one row. |
@@ -527,6 +528,20 @@ pstack's `/no-comments` ran Comment Sicko over `sketch/` (generated files exclud
 
 The guessed or unverified wire schemas are named so (`guessedWireResponseSchema`, `unverifiedOrsResponseSchema`) instead of being marked by comments.
 
+### Second pass (after the docs revision)
+
+Comment Sicko ran again over the files the docs revision changed. It deleted 17 comment lines (11 comments) and kept the two `judge/index.ts` contracts ("never rejects for a Jev problem"). All deletions were accepted. Its `MUST KILL` flags:
+
+| Flag | Resolution |
+|---|---|
+| `courseValidator.surroundings` used `null` for "Overpass was down" | `{ kind: 'unknown' } \| { kind: 'known', greenShare, mainRoadShare }` |
+| `courseValidator` path and share rules were prose-only (brand `Course`, a `Fraction` type) | **Rejected:** brands do not survive a Convex `v` round trip (see the deliberate deviation above). `MAX_PATH_POINTS` and the [0, 1] shares stay enforced by `toCourse`. |
+| `fitValidator` field meanings were prose-only | Renamed `bodyPositionTowardBest`, `moodPositionTowardBest`, `unsuitableProbability` |
+| `advance` returned a silent `null` | `Transition = { kind: 'advanced', … } \| { kind: 'ignored' }`; `INITIAL_TRANSITION` became `INITIAL_STATE` |
+| `ShownCourses` order and non-emptiness were prose-only | Field renamed `bestFirst`. **`NonEmpty` rejected:** the courses come from a `v.array`, so the tuple would need a cast or a "never happens" throw. |
+| `requestProposal` hid whether it scheduled anything | Returns `{ kind: 'started' \| 'alreadyWorking', proposalId }` |
+| `applyOwnerEvent` silently ignored a non-latest proposal | Renamed `applyOwnerEventToLatest` |
+
 ## Tradeoffs accepted
 
 - **A persisted proposal, a scheduler and a watchdog**, which add more moving parts than an action that returns its result. In exchange, confirm and retry resume without redoing work, progress is reactive, and a proposal survives the app being backgrounded.
@@ -536,7 +551,7 @@ The guessed or unverified wire schemas are named so (`guessedWireResponseSchema`
 - **Jev reads English, the Owner reads Japanese** (ADR 0005). Mood has a Japanese label in the app and an English description on the server; Breed carries both `ja` and `en`. In exchange, prompts are in Jev's strongest language.
 - **The length class is asked even when a target was given.** In exchange, the Condition Check is one request whatever the Owner entered (TypeSafe's speculative fan-out).
 - **One validated `as` cast** in `readAnswers`. In exchange, every caller gets answers typed by its own questions.
-- **An Overpass failure degrades** (`surroundings: null`) instead of failing the proposal.
+- **An Overpass failure degrades** (`surroundings: { kind: 'unknown' }`) instead of failing the proposal.
 - **De-duplication can leave fewer than 5 candidates.** At least one loop is required; otherwise the proposal fails with `noLoopFound`.
 - **Home shows only the latest proposal.** Older ones stay in the table, unseen, because they are needed to derive the previous Start Point.
 - **Units are in names, not brands** (see [TypeScript](#typescript-pstack-typescript-best-practices)).

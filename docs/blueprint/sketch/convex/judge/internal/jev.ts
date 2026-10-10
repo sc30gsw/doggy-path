@@ -59,7 +59,6 @@ export type ScoreQuestion = JevQuestion<ScoreAnswer>;
 
 export type QuestionSet = { readonly [key: string]: JevQuestion<unknown> };
 
-/** Every asked question has an answer of its kind; anything less is a `malformed` failure. */
 export type JevAnswers<Qs extends QuestionSet> = {
   -readonly [K in keyof Qs]: Qs[K] extends JevQuestion<infer Answer> ? Answer : never;
 };

@@ -10,7 +10,6 @@ const MOOD_CHIPS: Record<Mood, { label: string; symbol: SymbolViewProps['name'] 
   refresh: { label: '気分転換', symbol: { ios: 'arrow.triangle.2.circlepath', android: 'autorenew' } },
 };
 
-/** Single choice; tapping the selected chip clears it (Mood is optional). */
 export function MoodChips(props: {
   value: Mood | null;
   onChange: (mood: Mood | null) => void;

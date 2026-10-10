@@ -199,9 +199,9 @@ export function courseSummary({ course, pace }: { course: Course; pace: WalkingP
     hills: climbForJev(course.ascentM),
     unpavedSurface: shareForJev(course.unpavedShare),
     besideParksAndGreenery:
-      course.surroundings === null ? UNKNOWN : shareForJev(course.surroundings.greenShare),
+      course.surroundings.kind === 'known' ? shareForJev(course.surroundings.greenShare) : UNKNOWN,
     besideMainRoads:
-      course.surroundings === null ? UNKNOWN : shareForJev(course.surroundings.mainRoadShare),
+      course.surroundings.kind === 'known' ? shareForJev(course.surroundings.mainRoadShare) : UNKNOWN,
   };
 }
 
@@ -290,8 +290,8 @@ export function interpretFit({
   hasMood: boolean;
 }): Fit {
   return {
-    body: answers[bodyFitKey(courseKey)].positionTowardBest,
-    mood: hasMood ? answers[moodFitKey(courseKey)].positionTowardBest : null,
-    unsuitable: answers[unsuitableKey(courseKey)].probability,
+    bodyPositionTowardBest: answers[bodyFitKey(courseKey)].positionTowardBest,
+    moodPositionTowardBest: hasMood ? answers[moodFitKey(courseKey)].positionTowardBest : null,
+    unsuitableProbability: answers[unsuitableKey(courseKey)].probability,
   };
 }

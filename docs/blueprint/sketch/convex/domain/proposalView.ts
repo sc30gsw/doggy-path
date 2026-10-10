@@ -11,14 +11,13 @@ export type ShownCourse = {
   estimatedMinutes: number;
 };
 
-/** At most SHOWN_COURSE_COUNT courses, best first, never empty. */
 export type ShownCourses =
   | {
       order: 'recommended';
-      courses: Array<ShownCourse & { reason: FitKind; unsuitable: boolean }>;
+      bestFirst: Array<ShownCourse & { reason: FitKind; unsuitable: boolean }>;
       allUnsuitable: boolean;
     }
-  | { order: 'byLength'; courses: ShownCourse[] };
+  | { order: 'byLength'; bestFirst: ShownCourse[] };
 
 export type ProposalStatus =
   | { kind: 'working'; step: 'checking' | 'building' }
@@ -72,7 +71,7 @@ function toShownCourses(state: Extract<Doc<'proposals'>['state'], { phase: 'read
     case 'recommended':
       return {
         order: 'recommended',
-        courses: ranked.courses.map(({ course, reason, unsuitable }) => ({
+        bestFirst: ranked.courses.map(({ course, reason, unsuitable }) => ({
           ...toShownCourse({ course, pace }),
           reason,
           unsuitable,
@@ -80,7 +79,10 @@ function toShownCourses(state: Extract<Doc<'proposals'>['state'], { phase: 'read
         allUnsuitable: ranked.courses.every(({ unsuitable }) => unsuitable),
       };
     case 'byLength':
-      return { order: 'byLength', courses: ranked.courses.map((course) => toShownCourse({ course, pace })) };
+      return {
+        order: 'byLength',
+        bestFirst: ranked.courses.map((course) => toShownCourse({ course, pace })),
+      };
     default: {
       const _exhaustive: never = ranked;
       return _exhaustive;

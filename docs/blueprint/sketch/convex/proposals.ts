@@ -1,17 +1,17 @@
 import { v } from 'convex/values';
 
-import type { Id } from './_generated/dataModel';
 import { internalMutation, internalQuery, mutation, query } from './_generated/server';
 import { courseConditionsValidator, latLngValidator } from './domain/courseConditions';
 import { runEventValidator } from './domain/proposal';
 import type { ProposalView } from './domain/proposalView';
 import { requireOwnerId } from './model/owners';
 import {
-  applyOwnerEvent,
+  applyOwnerEventToLatest,
   currentView,
   loadRunInput,
   recordRunEvent,
   requestProposal,
+  type RequestResult,
   type RunInput,
 } from './model/proposals';
 
@@ -30,7 +30,7 @@ export const request = mutation({
     conditions: courseConditionsValidator,
     deviceLocation: v.optional(latLngValidator),
   },
-  handler: async (ctx, { conditions, deviceLocation }): Promise<Id<'proposals'>> => {
+  handler: async (ctx, { conditions, deviceLocation }): Promise<RequestResult> => {
     const userId = await requireOwnerId(ctx);
     return requestProposal(ctx, { userId, conditions, deviceLocation });
   },
@@ -41,7 +41,7 @@ export const proceed = mutation({
   args: { proposalId: v.id('proposals') },
   handler: async (ctx, { proposalId }): Promise<null> => {
     const userId = await requireOwnerId(ctx);
-    await applyOwnerEvent(ctx, { userId, proposalId, event: { type: 'confirmed' } });
+    await applyOwnerEventToLatest(ctx, { userId, proposalId, event: { type: 'confirmed' } });
     return null;
   },
 });
@@ -50,7 +50,7 @@ export const retry = mutation({
   args: { proposalId: v.id('proposals') },
   handler: async (ctx, { proposalId }): Promise<null> => {
     const userId = await requireOwnerId(ctx);
-    await applyOwnerEvent(ctx, { userId, proposalId, event: { type: 'retryRequested' } });
+    await applyOwnerEventToLatest(ctx, { userId, proposalId, event: { type: 'retryRequested' } });
     return null;
   },
 });

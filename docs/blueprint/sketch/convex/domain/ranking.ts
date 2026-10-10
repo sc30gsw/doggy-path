@@ -48,13 +48,15 @@ export function rankCourses({
 }
 
 function isUnsuitable(fit: Fit): boolean {
-  return fit.unsuitable > UNSUITABLE_THRESHOLD;
+  return fit.unsuitableProbability > UNSUITABLE_THRESHOLD;
 }
 
 function weightedScore(fit: Fit): number {
-  return fit.mood === null ? fit.body : FIT_WEIGHTS.body * fit.body + FIT_WEIGHTS.mood * fit.mood;
+  const { bodyPositionTowardBest: body, moodPositionTowardBest: mood } = fit;
+  return mood === null ? body : FIT_WEIGHTS.body * body + FIT_WEIGHTS.mood * mood;
 }
 
 function strongerFit(fit: Fit): FitKind {
-  return fit.mood !== null && fit.mood > fit.body ? 'mood' : 'body';
+  const { bodyPositionTowardBest: body, moodPositionTowardBest: mood } = fit;
+  return mood !== null && mood > body ? 'mood' : 'body';
 }

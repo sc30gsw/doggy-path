@@ -8,7 +8,6 @@ import { pathLengthM } from './geo';
 const ROUND_TRIP_URL = 'https://api.openrouteservice.org/v2/directions/foot-walking/geojson';
 const ROUND_TRIP_POINTS = 4;
 
-/** ORS round trips come back longer than the requested length; request this fraction of it. */
 export const ROUND_TRIP_OVERSHOOT_COMPENSATION = 0.85;
 
 const NO_ROUTE_ERROR_CODES: ReadonlySet<number> = new Set([2004, 2009, 2010, 2099]);

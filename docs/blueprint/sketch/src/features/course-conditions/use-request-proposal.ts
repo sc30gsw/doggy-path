@@ -19,7 +19,10 @@ export function useRequestProposal(): (conditions: CourseConditions) => Promise<
   return async (conditions) => {
     const deviceLocation = conditions.chosenStartPoint ? null : await getDeviceLocation();
     try {
-      const proposalId = await request({ conditions, deviceLocation: deviceLocation ?? undefined });
+      const { proposalId } = await request({
+        conditions,
+        deviceLocation: deviceLocation ?? undefined,
+      });
       return { ok: true, proposalId };
     } catch (error) {
       if (error instanceof ConvexError && vb.is(dailyLimitReachedSchema, error.data)) {
