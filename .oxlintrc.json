@@ -8,5 +8,5 @@
   "env": {
     "builtin": true
   },
-  "ignorePatterns": ["convex/_generated/**"]
+  "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**"]
 }
