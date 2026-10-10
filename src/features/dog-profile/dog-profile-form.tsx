@@ -1,8 +1,17 @@
 import { useMutation } from 'convex/react';
-import { Button, Column, FieldGroup, Host, Picker, Switch, Text, TextInput } from '@expo/ui';
-import { useState } from 'react';
-import { FlatList, Modal, Pressable, View } from 'react-native';
+import { Button, FieldGroup, Host, Picker, Switch, Text, TextInput } from '@expo/ui';
+import { useState, type ReactNode } from 'react';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  Text as NativeText,
+  TextInput as NativeTextInput,
+  View,
+} from 'react-native';
 
+import { FORM_MODIFIERS } from '@/components/form-modifiers';
+import { CenteredButton, LabeledRow } from '@/components/form-rows';
 import { api } from '@/convex/_generated/api';
 import {
   DOG_PROFILE_LIMITS,
@@ -14,6 +23,7 @@ import {
   type Owner,
   type Sex,
 } from '@/convex/domain/dogProfile';
+import { usePalette } from '@/hooks/use-palette';
 import { searchBreeds, type BreedOption } from '@/features/dog-profile/breed-search';
 import {
   draftFromOwner,
@@ -25,8 +35,9 @@ import {
 const SEX_LABELS: Record<Sex, string> = { male: 'オス', female: 'メス' };
 
 function FieldError({ message }: { message?: string }) {
+  const palette = usePalette();
   if (!message) return null;
-  return <Text>{message}</Text>;
+  return <Text textStyle={{ color: palette.danger }}>{message}</Text>;
 }
 
 function monthsFor(year: number, now: Date): readonly Month[] {
@@ -43,7 +54,11 @@ function isMonth(value: string | number, months: readonly Month[]): value is Mon
   return months.some((month) => month === value);
 }
 
-export function DogProfileForm(props: { initial?: Owner; submitLabel: string }) {
+export function DogProfileForm(props: {
+  initial?: Owner;
+  submitLabel: string;
+  children?: ReactNode;
+}) {
   const save = useMutation(api.owners.save);
   const [now] = useState(() => new Date());
   const [draft, setDraft] = useState<DogProfileDraft>(() =>
@@ -51,6 +66,9 @@ export function DogProfileForm(props: { initial?: Owner; submitLabel: string }) 
   );
   const [errors, setErrors] = useState<Partial<Record<keyof DogProfileDraft, string>>>({});
   const [pending, setPending] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [choosingBreed, setChoosingBreed] = useState(false);
+  const palette = usePalette();
 
   const submit = () => {
     const parsed = parseDogProfileDraft(draft);
@@ -60,7 +78,11 @@ export function DogProfileForm(props: { initial?: Owner; submitLabel: string }) 
     }
     setPending(true);
     setErrors({});
+    setSaved(false);
     void save({ owner: parsed.value })
+      .then(() => {
+        setSaved(true);
+      })
       .catch(() => {
         setErrors({ ownerName: '保存できませんでした' });
       })
@@ -69,101 +91,127 @@ export function DogProfileForm(props: { initial?: Owner; submitLabel: string }) 
       });
   };
 
+  const setBreed = (breed: Breed) => {
+    setDraft((current) => ({ ...current, breed }));
+  };
+
   return (
-    <Host style={{ flex: 1 }}>
-      <FieldGroup>
-        <FieldGroup.Section title="飼い主">
-          <TextInput
-            defaultValue={draft.ownerName}
-            placeholder="名前"
-            onChangeText={(ownerName) => {
-              setDraft((current) => ({ ...current, ownerName }));
-            }}
-          />
-          <FieldError message={errors.ownerName} />
-        </FieldGroup.Section>
-        <FieldGroup.Section title="わんちゃん">
-          <TextInput
-            defaultValue={draft.dogName}
-            placeholder="名前"
-            onChangeText={(dogName) => {
-              setDraft((current) => ({ ...current, dogName }));
-            }}
-          />
-          <FieldError message={errors.dogName} />
-          <BreedField
-            value={draft.breed}
-            error={errors.breed}
-            onChange={(breed) => {
-              setDraft((current) => ({ ...current, breed }));
-            }}
-          />
-          <BirthMonthField
-            now={now}
-            value={{
-              year: draft.birthYear,
-              month: draft.birthMonth,
-              estimated: draft.birthMonthEstimated,
-            }}
-            error={errors.birthYear ?? errors.birthMonth}
-            onChange={(value) => {
-              setDraft((current) => ({
-                ...current,
-                birthYear: value.year,
-                birthMonth: value.month,
-                birthMonthEstimated: value.estimated,
-              }));
-            }}
-          />
-          <SexField
-            sex={draft.sex}
-            error={errors.sex}
-            onChange={(sex) => {
-              setDraft((current) => ({ ...current, sex }));
-            }}
-          />
-          <TextInput
-            defaultValue={draft.weightKg}
-            placeholder="体重 (kg)"
-            keyboardType="decimal-pad"
-            onChangeText={(weightKg) => {
-              setDraft((current) => ({ ...current, weightKg }));
-            }}
-          />
-          <FieldError message={errors.weightKg} />
-          <TextInput
-            defaultValue={draft.dogMemo}
-            placeholder="メモ"
-            multiline
-            onChangeText={(dogMemo) => {
-              setDraft((current) => ({ ...current, dogMemo }));
-            }}
-          />
-          <FieldError message={errors.dogMemo} />
-        </FieldGroup.Section>
-      </FieldGroup>
-      <Column spacing={8}>
-        <Button label={props.submitLabel} disabled={pending} onPress={submit} />
-      </Column>
-    </Host>
+    <>
+      <Host style={{ flex: 1 }}>
+        <FieldGroup modifiers={FORM_MODIFIERS}>
+          <FieldGroup.Section title="飼い主">
+            <TextInput
+              defaultValue={draft.ownerName}
+              placeholder="名前"
+              onChangeText={(ownerName) => {
+                setDraft((current) => ({ ...current, ownerName }));
+              }}
+            />
+            <FieldError message={errors.ownerName} />
+          </FieldGroup.Section>
+          <FieldGroup.Section title="わんちゃん">
+            <TextInput
+              defaultValue={draft.dogName}
+              placeholder="名前"
+              onChangeText={(dogName) => {
+                setDraft((current) => ({ ...current, dogName }));
+              }}
+            />
+            <FieldError message={errors.dogName} />
+            <LabeledRow label="犬種">
+              <Button
+                variant="text"
+                label={draft.breed ? breedLabel(draft.breed) : '犬種を選ぶ'}
+                onPress={() => setChoosingBreed(true)}
+              />
+            </LabeledRow>
+            <FieldError message={errors.breed} />
+            <OtherBreedText value={draft.breed} onChange={setBreed} />
+            <BirthMonthRows
+              now={now}
+              value={{
+                year: draft.birthYear,
+                month: draft.birthMonth,
+                estimated: draft.birthMonthEstimated,
+              }}
+              onChange={(value) => {
+                setDraft((current) => ({
+                  ...current,
+                  birthYear: value.year,
+                  birthMonth: value.month,
+                  birthMonthEstimated: value.estimated,
+                }));
+              }}
+            />
+            <FieldError message={errors.birthYear ?? errors.birthMonth} />
+            <SexRow
+              sex={draft.sex}
+              onChange={(sex) => {
+                setDraft((current) => ({ ...current, sex }));
+              }}
+            />
+            <FieldError message={errors.sex} />
+            <TextInput
+              defaultValue={draft.weightKg}
+              placeholder="体重 (kg)"
+              keyboardType="decimal-pad"
+              onChangeText={(weightKg) => {
+                setDraft((current) => ({ ...current, weightKg }));
+              }}
+            />
+            <FieldError message={errors.weightKg} />
+            <TextInput
+              defaultValue={draft.dogMemo}
+              placeholder="メモ"
+              multiline
+              onChangeText={(dogMemo) => {
+                setDraft((current) => ({ ...current, dogMemo }));
+              }}
+            />
+            <FieldError message={errors.dogMemo} />
+          </FieldGroup.Section>
+          <FieldGroup.Section>
+            <CenteredButton label={props.submitLabel} disabled={pending} onPress={submit} />
+            {Object.keys(errors).length > 0 ? (
+              <FieldGroup.SectionFooter>
+                <Text textStyle={{ color: palette.danger }}>入力内容を確認してください</Text>
+              </FieldGroup.SectionFooter>
+            ) : null}
+            {saved ? (
+              <FieldGroup.SectionFooter>
+                <Text textStyle={{ color: palette.textSecondary }}>保存しました</Text>
+              </FieldGroup.SectionFooter>
+            ) : null}
+          </FieldGroup.Section>
+          {props.children}
+        </FieldGroup>
+      </Host>
+      <BreedPicker
+        visible={choosingBreed}
+        onClose={() => setChoosingBreed(false)}
+        onPick={(breed) => {
+          setBreed(breed);
+          setChoosingBreed(false);
+        }}
+      />
+    </>
   );
 }
 
-function SexField(props: { sex: Sex | null; error?: string; onChange: (sex: Sex) => void }) {
+function SexRow(props: { sex: Sex | null; onChange: (sex: Sex) => void }) {
   return (
-    <Column spacing={8}>
+    <LabeledRow label="性別">
       <Picker
         selectedValue={props.sex ?? 'unselected'}
         onValueChange={(value) => {
           if (isSex(value)) props.onChange(value);
         }}
       >
-        <Picker.Item label="性別" value="unselected" />
+        <Picker.Item label="選択" value="unselected" />
         <Picker.Item label={SEX_LABELS.male} value="male" />
         <Picker.Item label={SEX_LABELS.female} value="female" />
       </Picker>
-      <FieldError message={props.error} />
-    </Column>
+    </LabeledRow>
   );
 }
 
@@ -180,28 +228,43 @@ function OtherBreedText(props: { value: Breed | null; onChange: (breed: Breed) =
   );
 }
 
-function BreedField(props: {
-  value: Breed | null;
-  onChange: (breed: Breed) => void;
-  error?: string;
+function BreedPicker(props: {
+  visible: boolean;
+  onClose: () => void;
+  onPick: (breed: Breed) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const palette = usePalette();
   const options = searchBreeds(query);
 
   return (
-    <View>
-      <Button
-        variant="outlined"
-        label={props.value ? breedLabel(props.value) : '犬種を選ぶ'}
-        onPress={() => setOpen(true)}
-      />
-      <FieldError message={props.error} />
-      <OtherBreedText value={props.value} onChange={props.onChange} />
-      <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Host matchContents={{ vertical: true }}>
-          <TextInput placeholder="犬種を検索" onChangeText={setQuery} />
-        </Host>
+    <Modal
+      visible={props.visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={props.onClose}
+    >
+      <View style={{ flex: 1, backgroundColor: palette.background }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
+          <NativeTextInput
+            placeholder="犬種を検索"
+            placeholderTextColor={palette.textSecondary}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            style={{
+              flex: 1,
+              fontSize: 17,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderRadius: 10,
+              color: palette.text,
+              backgroundColor: palette.backgroundElement,
+            }}
+          />
+          <Pressable accessibilityRole="button" onPress={props.onClose} hitSlop={8}>
+            <NativeText style={{ fontSize: 17, color: palette.tint }}>閉じる</NativeText>
+          </Pressable>
+        </View>
         <FlatList
           data={options}
           keyExtractor={(item) => (item.kind === 'jkc' ? item.id : item.kind)}
@@ -209,17 +272,28 @@ function BreedField(props: {
           renderItem={({ item }) => (
             <Pressable
               accessibilityRole="button"
-              onPress={() => {
-                props.onChange(breedFromOption(item));
-                setOpen(false);
-              }}
+              onPress={() => props.onPick(breedFromOption(item))}
+              style={({ pressed }) => ({
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                opacity: pressed ? 0.5 : 1,
+              })}
             >
-              <Text>{item.label}</Text>
+              <NativeText style={{ fontSize: 17, color: palette.text }}>{item.label}</NativeText>
             </Pressable>
           )}
+          ItemSeparatorComponent={() => (
+            <View
+              style={{
+                height: 1,
+                marginLeft: 20,
+                backgroundColor: palette.backgroundSelected,
+              }}
+            />
+          )}
         />
-      </Modal>
-    </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -229,11 +303,10 @@ function breedFromOption(option: BreedOption): Breed {
   return { kind: 'other', text: '' };
 }
 
-function BirthMonthField(props: {
+function BirthMonthRows(props: {
   now: Date;
   value: BirthMonth;
   onChange: (value: BirthMonth) => void;
-  error?: string;
 }) {
   const thisYear = props.now.getFullYear();
   const years: number[] = [];
@@ -243,39 +316,42 @@ function BirthMonthField(props: {
   const months = monthsFor(props.value.year, props.now);
 
   return (
-    <Column spacing={8}>
-      <Picker
-        selectedValue={props.value.year}
-        onValueChange={(year) => {
-          if (typeof year !== 'number') return;
-          const available = monthsFor(year, props.now);
-          const month = available.includes(props.value.month)
-            ? props.value.month
-            : available[available.length - 1];
-          if (month === undefined) return;
-          props.onChange({ ...props.value, year, month });
-        }}
-      >
-        {years.map((year) => (
-          <Picker.Item key={year} label={`${year}年`} value={year} />
-        ))}
-      </Picker>
-      <Picker
-        selectedValue={props.value.month}
-        onValueChange={(month) => {
-          if (isMonth(month, months)) props.onChange({ ...props.value, month });
-        }}
-      >
-        {months.map((month) => (
-          <Picker.Item key={month} label={`${month}月`} value={month} />
-        ))}
-      </Picker>
+    <>
+      <LabeledRow label="生まれ年">
+        <Picker
+          selectedValue={props.value.year}
+          onValueChange={(year) => {
+            if (typeof year !== 'number') return;
+            const available = monthsFor(year, props.now);
+            const month = available.includes(props.value.month)
+              ? props.value.month
+              : available[available.length - 1];
+            if (month === undefined) return;
+            props.onChange({ ...props.value, year, month });
+          }}
+        >
+          {years.map((year) => (
+            <Picker.Item key={year} label={`${year}年`} value={year} />
+          ))}
+        </Picker>
+      </LabeledRow>
+      <LabeledRow label="生まれ月">
+        <Picker
+          selectedValue={props.value.month}
+          onValueChange={(month) => {
+            if (isMonth(month, months)) props.onChange({ ...props.value, month });
+          }}
+        >
+          {months.map((month) => (
+            <Picker.Item key={month} label={`${month}月`} value={month} />
+          ))}
+        </Picker>
+      </LabeledRow>
       <Switch
         label="推定"
         value={props.value.estimated}
         onValueChange={(estimated) => props.onChange({ ...props.value, estimated })}
       />
-      <FieldError message={props.error} />
-    </Column>
+    </>
   );
 }

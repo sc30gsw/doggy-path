@@ -1,6 +1,8 @@
-import { Button, Column, FieldGroup, Host, Text, TextInput } from '@expo/ui';
+import { Column, FieldGroup, Host, RNHostView, Text, TextInput } from '@expo/ui';
 import { useState } from 'react';
 
+import { FORM_MODIFIERS } from '@/components/form-modifiers';
+import { CenteredButton } from '@/components/form-rows';
 import type { CourseConditions } from '@/convex/domain/courseConditions';
 import {
   EMPTY_CONDITIONS_DRAFT,
@@ -9,9 +11,10 @@ import {
   type ConditionsDraft,
 } from '@/features/course-conditions/conditions-draft';
 import { REFUSAL_LABELS } from '@/features/course-conditions/labels';
-import { MoodChips } from '@/features/course-conditions/mood-chips';
-import { StartPointField } from '@/features/course-conditions/start-point-field';
+import { START_POINT_HINT, StartPointRows } from '@/features/course-conditions/start-point-field';
 import { useRequestProposal } from '@/features/course-conditions/use-request-proposal';
+import { MOOD_CHIPS_HEIGHT, MoodChips } from '@/features/course-conditions/mood-chips';
+import { usePalette } from '@/hooks/use-palette';
 
 export function CourseConditionsForm(props: {
   initial?: CourseConditions;
@@ -24,6 +27,7 @@ export function CourseConditionsForm(props: {
   const [pending, setPending] = useState(false);
   const [refusal, setRefusal] = useState<keyof typeof REFUSAL_LABELS | undefined>();
   const requestProposal = useRequestProposal();
+  const palette = usePalette();
 
   const submit = () => {
     const parsed = parseConditionsDraft(draft);
@@ -46,14 +50,18 @@ export function CourseConditionsForm(props: {
 
   return (
     <Host style={{ flex: 1 }}>
-      <FieldGroup>
+      <FieldGroup modifiers={FORM_MODIFIERS}>
         <FieldGroup.Section title="今日の気分">
-          <MoodChips
-            value={draft.mood}
-            onChange={(mood) => {
-              setDraft((current) => ({ ...current, mood }));
-            }}
-          />
+          <Column style={{ height: MOOD_CHIPS_HEIGHT }}>
+            <RNHostView>
+              <MoodChips
+                value={draft.mood}
+                onChange={(mood) => {
+                  setDraft((current) => ({ ...current, mood }));
+                }}
+              />
+            </RNHostView>
+          </Column>
           <TextInput
             defaultValue={draft.todayMemo}
             placeholder="今日のメモ"
@@ -83,28 +91,35 @@ export function CourseConditionsForm(props: {
             }}
           />
           <FieldNote message={errors.targetTimeMin} />
-          <StartPointField
+        </FieldGroup.Section>
+        <FieldGroup.Section title="開始地点">
+          <StartPointRows
             value={draft.chosenStartPoint}
             onChange={(chosenStartPoint) => {
               setDraft((current) => ({ ...current, chosenStartPoint }));
             }}
           />
+          {draft.chosenStartPoint === null ? (
+            <FieldGroup.SectionFooter>
+              <Text>{START_POINT_HINT}</Text>
+            </FieldGroup.SectionFooter>
+          ) : null}
+        </FieldGroup.Section>
+        <FieldGroup.Section>
+          <CenteredButton label="この条件で提案" disabled={pending} onPress={submit} />
+          {refusal ? (
+            <FieldGroup.SectionFooter>
+              <Text textStyle={{ color: palette.danger }}>{REFUSAL_LABELS[refusal]}</Text>
+            </FieldGroup.SectionFooter>
+          ) : null}
         </FieldGroup.Section>
       </FieldGroup>
-      <Column spacing={8}>
-        <FieldNote message={refusalText(refusal)} />
-        <Button label="この条件で提案" disabled={pending} onPress={submit} />
-      </Column>
     </Host>
   );
 }
 
-function refusalText(refusal: keyof typeof REFUSAL_LABELS | undefined): string | undefined {
-  if (!refusal) return;
-  return REFUSAL_LABELS[refusal];
-}
-
 function FieldNote({ message }: { message?: string }) {
+  const palette = usePalette();
   if (!message) return null;
-  return <Text>{message}</Text>;
+  return <Text textStyle={{ color: palette.danger }}>{message}</Text>;
 }
