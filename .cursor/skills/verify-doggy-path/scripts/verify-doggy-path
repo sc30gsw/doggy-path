@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+PORT="${DOG_PATH_PORT:-8081}"
+EVIDENCE_ROOT="${DOG_PATH_EVIDENCE_ROOT:-/tmp/doggy-path-verify}"
+
+tmux_cmd() {
+  if [[ -f /exec-daemon/tmux.portal.conf ]]; then
+    tmux -f /exec-daemon/tmux.portal.conf "$@"
+  else
+    tmux "$@"
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+Usage: verify-doggy-path <launch|doctor|drive|cleanup> [feature]
+
+  launch                 Start Metro for this run. Refuses a second instance on the port.
+  doctor                 Report whether this run's Metro is healthy and whether a native surface is attached.
+  drive <feature>        Drive one mapped feature. Features: sign-in, dog-profile, course-conditions, course-display.
+  cleanup                Stop the Metro session this run started. Leaves the evidence directory in place.
+
+Environment:
+  DOG_PATH_RUN_ID          Evidence directory name. launch assigns one when unset.
+  DOG_PATH_PORT            Metro port (default 8081).
+  DOG_PATH_EVIDENCE_ROOT   Parent of run directories (default /tmp/doggy-path-verify).
+EOF
+}
+
+latest_file() {
+  printf '%s/latest' "$EVIDENCE_ROOT"
+}
+
+resolve_run_id() {
+  if [[ -n "${DOG_PATH_RUN_ID:-}" ]]; then
+    printf '%s' "$DOG_PATH_RUN_ID"
+    return
+  fi
+  local pointer
+  pointer="$(latest_file)"
+  if [[ -f "$pointer" ]]; then
+    cat "$pointer"
+    return
+  fi
+  echo "No run id. Run launch or set DOG_PATH_RUN_ID." >&2
+  exit 64
+}
+
+evidence_dir() {
+  printf '%s/%s' "$EVIDENCE_ROOT" "$(resolve_run_id)"
+}
+
+port_open() {
+  curl --silent --show-error --fail --max-time 2 "http://127.0.0.1:${PORT}/status" >/dev/null 2>&1
+}
+
+write_surface() {
+  local dest="$1"
+  if command -v xcrun >/dev/null 2>&1 && xcrun simctl list devices booted 2>/dev/null | grep -q '(Booted)'; then
+    printf 'ui-surface: ios-simulator\nworth-driving: yes\n' >"$dest"
+    return
+  fi
+  if command -v adb >/dev/null 2>&1 && adb devices 2>/dev/null | awk 'NR>1 && $2=="device" { found=1 } END { exit !found }'; then
+    printf 'ui-surface: android-device\nworth-driving: yes\n' >"$dest"
+    return
+  fi
+  cat >"$dest" <<'EOF'
+ui-surface: unavailable
+worth-driving: no
+blocker: No booted iOS Simulator and no adb device in the "device" state. doggy-path ships as an Expo native app. package.json does not depend on react-native-web or react-dom, and app.json has no web config, so `expo start --web` is not a user surface. Expo Go is also absent on this machine. The map screens need a development build because react-native-maps is a native module.
+EOF
+}
+
+launch() {
+  local run_id evidence session
+  run_id="${DOG_PATH_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+  export DOG_PATH_RUN_ID="$run_id"
+  evidence="$(evidence_dir)"
+  mkdir -p "$evidence"
+  printf '%s\n' "$run_id" >"$(latest_file)"
+  session="doggy-path-verify-${run_id}"
+  printf 'session=%s\nport=%s\nroot=%s\n' "$session" "$PORT" "$ROOT" >"$evidence/state.env"
+
+  if port_open; then
+    echo "Port ${PORT} already serves a Metro status page. Refusing to start a second doggy-path instance." | tee "$evidence/launch.txt"
+    exit 1
+  fi
+
+  tmux_cmd new-session -d -s "$session" -c "$ROOT" -- bash -lc "cd '$ROOT' && CI=1 EXPO_NO_TELEMETRY=1 bunx expo start --host localhost --port '$PORT'"
+  local attempt
+  for attempt in $(seq 1 45); do
+    if curl --silent --show-error --max-time 2 "http://127.0.0.1:${PORT}/status" >"$evidence/metro-status.txt" 2>"$evidence/metro-status.err"; then
+      tmux_cmd capture-pane -p -t "$session" >"$evidence/launch.log" || true
+      echo "ready: http://127.0.0.1:${PORT} run=${run_id}" | tee "$evidence/launch.txt"
+      return
+    fi
+    sleep 2
+  done
+  tmux_cmd capture-pane -p -t "$session" >"$evidence/launch.log" || true
+  echo "Metro did not answer http://127.0.0.1:${PORT}/status" | tee "$evidence/launch.txt"
+  exit 1
+}
+
+doctor() {
+  local evidence
+  evidence="$(evidence_dir)"
+  mkdir -p "$evidence"
+  # shellcheck disable=SC1091
+  source "$evidence/state.env"
+
+  {
+    echo "run=$(resolve_run_id)"
+    echo "port=${port}"
+    if curl --silent --show-error --fail --max-time 5 "http://127.0.0.1:${port}/status"; then
+      echo
+      echo "metro: up"
+    else
+      echo "metro: down"
+    fi
+    if [[ -f "$ROOT/.env.local" ]] && grep -Eq '^EXPO_PUBLIC_CONVEX_URL=.+' "$ROOT/.env.local"; then
+      echo "convex-url: set"
+    else
+      echo "convex-url: missing"
+    fi
+    if tmux_cmd has-session -t "=$session" 2>/dev/null; then
+      echo "session: $session"
+    else
+      echo "session: missing"
+    fi
+  } >"$evidence/doctor.txt"
+  write_surface "$evidence/surface.txt"
+  cat "$evidence/surface.txt" >>"$evidence/doctor.txt"
+
+  local bundle_status
+  bundle_status="$(curl --silent --show-error --output "$evidence/ios-bundle.body" --write-out '%{http_code}' --max-time 180 "http://127.0.0.1:${port}/node_modules/expo-router/entry.bundle?platform=ios&dev=true&minify=false" || true)"
+  {
+    echo "ios-bundle-http: ${bundle_status:-000}"
+    if [[ -f "$evidence/ios-bundle.body" ]]; then
+      echo "ios-bundle-bytes: $(wc -c <"$evidence/ios-bundle.body" | tr -d ' ')"
+      if grep -q 'EXPO_PUBLIC_CONVEX_URL is not set' "$evidence/ios-bundle.body"; then
+        echo "ios-bundle-error: EXPO_PUBLIC_CONVEX_URL is not set"
+      fi
+    fi
+  } >>"$evidence/doctor.txt"
+  rm -f "$evidence/ios-bundle.body"
+
+  if ! grep -q 'metro: up' "$evidence/doctor.txt"; then
+    exit 1
+  fi
+  if ! grep -q 'convex-url: set' "$evidence/doctor.txt"; then
+    exit 1
+  fi
+}
+
+drive() {
+  local feature="$1"
+  local evidence
+  case "$feature" in
+    sign-in | dog-profile | course-conditions | course-display) ;;
+    *)
+      echo "Unknown feature: $feature" >&2
+      usage >&2
+      exit 64
+      ;;
+  esac
+  evidence="$(evidence_dir)"
+  doctor
+  {
+    echo "feature: $feature"
+    echo "entry: features/${feature}.md"
+    cat "$evidence/surface.txt"
+  } >"$evidence/drive-${feature}.txt"
+  if grep -q 'worth-driving: no' "$evidence/surface.txt"; then
+    echo "result: blocked" >>"$evidence/drive-${feature}.txt"
+    cat "$evidence/drive-${feature}.txt"
+    exit 2
+  fi
+  echo "result: surface-ready" >>"$evidence/drive-${feature}.txt"
+  echo "This helper cannot tap @expo/ui controls. Follow features/${feature}.md on the attached surface and save the screenshot beside this file." >>"$evidence/drive-${feature}.txt"
+  exit 3
+}
+
+cleanup() {
+  local evidence
+  evidence="$(evidence_dir)"
+  # shellcheck disable=SC1091
+  source "$evidence/state.env"
+  if tmux_cmd has-session -t "=$session" 2>/dev/null; then
+    tmux_cmd kill-session -t "$session"
+    echo "stopped-session: $session" | tee "$evidence/cleanup.txt"
+  else
+    echo "stopped-session: already-absent $session" | tee "$evidence/cleanup.txt"
+  fi
+  echo "evidence: $evidence" | tee -a "$evidence/cleanup.txt"
+}
+
+command_name="${1:-}"
+shift || true
+case "$command_name" in
+  launch) launch ;;
+  doctor) doctor ;;
+  drive) drive "${1:-}" ;;
+  cleanup) cleanup ;;
+  *)
+    usage
+    exit 64
+    ;;
+esac
