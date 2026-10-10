@@ -22,7 +22,7 @@ verify-doggy-path launch
 
 `launch` assigns `DOG_PATH_RUN_ID` when it is unset, writes it to `/tmp/doggy-path-verify/latest`, and starts Metro in a tmux session named `doggy-path-verify-<run-id>`. The command is `CI=1 EXPO_NO_TELEMETRY=1 bunx expo start --host localhost --port 8081` (override the port with `DOG_PATH_PORT`). On this environment the tmux binary is invoked with `-f /exec-daemon/tmux.portal.conf` when that file exists.
 
-Ready means `http://127.0.0.1:8081/status` returns a body that contains `packager-status:running`, and `launch.txt` in the evidence directory says `ready:`. The pane log is `launch.log`.
+Ready means `http://localhost:8081/status` returns a body that contains `packager-status:running`, and `launch.txt` in the evidence directory says `ready:`. The pane log is `launch.log`. `expo start --host localhost` listens on the IPv6 loopback (`::1`). Use `localhost` in every URL. `127.0.0.1` does not connect.
 
 `.env.local` must already contain `EXPO_PUBLIC_CONVEX_URL`. Expo loads that file. Create it with `bunx convex dev` against a development deployment (`CONVEX_AGENT_MODE=anonymous` for a cloud agent). Never `bunx convex deploy`. Never commit `.env.local` or API keys. Leave `app.json` `androidGoogleMapsApiKey` empty.
 
@@ -56,7 +56,7 @@ verify-doggy-path drive <feature>
 
 The helper runs doctor first. When `worth-driving: no`, it writes `drive-<feature>.txt` with `result: blocked` and exits 2. That is a failed drive. Do not mark the feature verified.
 
-When a surface is attached, the helper exits 3 with `result: surface-ready`. It does not tap the screen. Continue with the feature file: open the dev client or Expo Go on that surface at `exp://127.0.0.1:8081`, then use the quoted Japanese labels. Save a screenshot of the action and of the resulting screen into the evidence directory. Sign-in and the dog profile can use Expo Go when the Go build matches Expo SDK 57 and includes `expo-secure-store`. The conditions sheet map and the home course map use `react-native-maps`, which needs a development build (`bunx expo run:ios`, `bunx expo run:android`, or `eas build --profile development`). This repo has no checked-in `ios/` or `android/` project.
+When a surface is attached, the helper exits 3 with `result: surface-ready`. It does not tap the screen. Continue with the feature file: open the dev client or Expo Go on that surface at `exp://localhost:8081`, then use the quoted Japanese labels. Save a screenshot of the action and of the resulting screen into the evidence directory. Sign-in and the dog profile can use Expo Go when the Go build matches Expo SDK 57 and includes `expo-secure-store`. The conditions sheet map and the home course map use `react-native-maps`, which needs a development build (`bunx expo run:ios`, `bunx expo run:android`, or `eas build --profile development`). This repo has no checked-in `ios/` or `android/` project.
 
 Account flows call the Convex deployment named by `EXPO_PUBLIC_CONVEX_URL`. A Metro that is up with a dead backend still fails sign-in. Confirm the proposal or owner row from a second read (`bunx convex` data, or the Profile tab after a successful save) before calling a mutation proven.
 

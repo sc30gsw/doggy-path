@@ -23,7 +23,7 @@ Preconditions:
 - The Convex deployment is the development one in `.env.local`, and it is accepting auth requests.
 - Use a fresh email for `sign-up`. Use an email that already has a saved dog profile for `sign-in-existing`.
 
-- **Open the screen.** Launch the native client at `exp://127.0.0.1:8081`. Run `verify-doggy-path drive sign-in`. When the result is `surface-ready`, the screen shows placeholders `メールアドレス` and `パスワード`, a button `ログイン`, and a button `アカウントを作る`.
+- **Open the screen.** Launch the native client at `exp://localhost:8081`. Run `verify-doggy-path drive sign-in`. When the result is `surface-ready`, the screen shows placeholders `メールアドレス` and `パスワード`, a button `ログイン`, and a button `アカウントを作る`.
 - **Reject a short password.** Type `owner@example.com` and `short`, then press `ログイン`. The text `パスワードは8文字以上にしてください` appears. No navigation happens.
 - **Reject a bad email.** Clear the email, type `not-an-email` and a password of at least 8 characters, then press `ログイン`. The text `メールアドレスの形式が正しくありません` appears.
 - **Create an account.** Press `アカウントを作る`. The submit button label becomes `登録してはじめる`. Enter a new email and a password of at least 8 characters, then press `登録してはじめる`. The onboarding screen appears, with section titles `飼い主` and `わんちゃん` and the button `はじめる`.

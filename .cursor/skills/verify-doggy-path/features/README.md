@@ -4,7 +4,7 @@ This directory is the maintained source for verifying the Owner-facing behavior 
 
 ## Baseline preconditions
 
-- Launch Metro with `verify-doggy-path launch` from the repo root. The ready line is `packager-status:running` on `http://127.0.0.1:8081/status`.
+- Launch Metro with `verify-doggy-path launch` from the repo root. The ready line is `packager-status:running` on `http://localhost:8081/status`. That host is the IPv6 loopback. `127.0.0.1` is the wrong address.
 - `.env.local` has `EXPO_PUBLIC_CONVEX_URL` pointing at a development Convex deployment. Do not print or commit that URL.
 - Run `verify-doggy-path doctor`. Continue a UI drive only when `surface.txt` says `worth-driving: yes`.
 - Never drive a Metro this run did not start. `launch` refuses when port 8081 is already taken.

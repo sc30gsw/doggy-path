@@ -52,8 +52,12 @@ evidence_dir() {
   printf '%s/%s' "$EVIDENCE_ROOT" "$(resolve_run_id)"
 }
 
+metro_url() {
+  printf 'http://localhost:%s' "$1"
+}
+
 port_open() {
-  curl --silent --show-error --fail --max-time 2 "http://127.0.0.1:${PORT}/status" >/dev/null 2>&1
+  curl --silent --show-error --fail --max-time 2 "$(metro_url "$PORT")/status" >/dev/null 2>&1
 }
 
 write_surface() {
@@ -84,22 +88,22 @@ launch() {
   printf 'session=%s\nport=%s\nroot=%s\n' "$session" "$PORT" "$ROOT" >"$evidence/state.env"
 
   if port_open; then
-    echo "Port ${PORT} already serves a Metro status page. Refusing to start a second doggy-path instance." | tee "$evidence/launch.txt"
+    echo "localhost:${PORT} already serves a Metro status page. Refusing to start a second doggy-path instance." | tee "$evidence/launch.txt"
     exit 1
   fi
 
   tmux_cmd new-session -d -s "$session" -c "$ROOT" -- bash -lc "cd '$ROOT' && CI=1 EXPO_NO_TELEMETRY=1 bunx expo start --host localhost --port '$PORT'"
   local attempt
   for attempt in $(seq 1 45); do
-    if curl --silent --show-error --max-time 2 "http://127.0.0.1:${PORT}/status" >"$evidence/metro-status.txt" 2>"$evidence/metro-status.err"; then
+    if curl --silent --show-error --max-time 2 "$(metro_url "$PORT")/status" >"$evidence/metro-status.txt" 2>"$evidence/metro-status.err"; then
       tmux_cmd capture-pane -p -t "$session" >"$evidence/launch.log" || true
-      echo "ready: http://127.0.0.1:${PORT} run=${run_id}" | tee "$evidence/launch.txt"
+      echo "ready: $(metro_url "$PORT") run=${run_id}" | tee "$evidence/launch.txt"
       return
     fi
     sleep 2
   done
   tmux_cmd capture-pane -p -t "$session" >"$evidence/launch.log" || true
-  echo "Metro did not answer http://127.0.0.1:${PORT}/status" | tee "$evidence/launch.txt"
+  echo "Metro did not answer $(metro_url "$PORT")/status" | tee "$evidence/launch.txt"
   exit 1
 }
 
@@ -113,7 +117,7 @@ doctor() {
   {
     echo "run=$(resolve_run_id)"
     echo "port=${port}"
-    if curl --silent --show-error --fail --max-time 5 "http://127.0.0.1:${port}/status"; then
+    if curl --silent --show-error --fail --max-time 5 "$(metro_url "$port")/status"; then
       echo
       echo "metro: up"
     else
@@ -134,7 +138,7 @@ doctor() {
   cat "$evidence/surface.txt" >>"$evidence/doctor.txt"
 
   local bundle_status
-  bundle_status="$(curl --silent --show-error --output "$evidence/ios-bundle.body" --write-out '%{http_code}' --max-time 180 "http://127.0.0.1:${port}/node_modules/expo-router/entry.bundle?platform=ios&dev=true&minify=false" || true)"
+  bundle_status="$(curl --silent --show-error --output "$evidence/ios-bundle.body" --write-out '%{http_code}' --max-time 180 "$(metro_url "$port")/node_modules/expo-router/entry.bundle?platform=ios&dev=true&minify=false" || true)"
   {
     echo "ios-bundle-http: ${bundle_status:-000}"
     if [[ -f "$evidence/ios-bundle.body" ]]; then
