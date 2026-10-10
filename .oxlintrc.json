@@ -4,7 +4,79 @@
   "categories": {
     "correctness": "error"
   },
-  "rules": {},
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "**/judge/internal",
+              "**/judge/internal/**",
+              "**/courseBuilder/internal",
+              "**/courseBuilder/internal/**"
+            ],
+            "message": "Import the module's public entry, not its internal files."
+          }
+        ]
+      }
+    ]
+  },
+  "jsPlugins": [{ "name": "convex", "specifier": "@convex-dev/eslint-plugin" }],
+  "options": {
+    "typeAware": true
+  },
+  "overrides": [
+    {
+      "files": ["convex/judge/**", "convex/courseBuilder/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/judge/internal",
+                  "**/judge/internal/**",
+                  "**/courseBuilder/internal",
+                  "**/courseBuilder/internal/**"
+                ],
+                "message": "Import the module's public entry, not its internal files."
+              },
+              {
+                "group": [
+                  "@/convex/*",
+                  "!@/convex/domain",
+                  "!@/convex/_generated",
+                  "@/convex/*/**",
+                  "!@/convex/domain/**",
+                  "!@/convex/_generated/**"
+                ],
+                "message": "App code may import only @/convex/_generated and @/convex/domain."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["convex/**/*.ts"],
+      "rules": {
+        "convex/no-filter-in-query": "error",
+        "convex/no-duplicate-indexes": "error",
+        "convex/require-args-validator": "error",
+        "convex/require-access-control": ["error", { "pattern": "^(findOwnerId|requireOwnerId)$" }],
+        "convex/no-process-env": "error"
+      }
+    }
+  ],
   "env": {
     "builtin": true
   },
