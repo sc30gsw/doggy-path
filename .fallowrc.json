@@ -11,7 +11,9 @@
           "convex/courseBuilder/**",
           "convex/proposalRuns.ts",
           "src/features/course-conditions/**",
-          "src/app/conditions.tsx"
+          "src/features/course-display/**",
+          "src/app/conditions.tsx",
+          "src/app/(tabs)/index.tsx"
         ],
         "maxCyclomatic": 20,
         "maxCognitive": 20,

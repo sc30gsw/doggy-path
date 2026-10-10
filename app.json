@@ -35,7 +35,13 @@
           "locationWhenInUsePermission": "現在地から散歩コースを作るために使用します。"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": ""
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
