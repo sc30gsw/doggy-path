@@ -1,3 +1,3 @@
-# Jev はコース候補を作らず、選んで並べ替える
+# Jev ranks Course Candidates; it does not build them
 
-Jev（TypeSafe の System One モデル）は型付きの判断や確率を返すモデルで、地理的な道順を生成できない。そこで、周回するコース候補はコード側でルート検索 API を使って複数本作り、Jev は犬プロフィールとコース条件をもとに各候補を評価して並べ替える役割に限定する。Jev に方針だけを判断させてルートを1本だけ作る案や、方針判断と並べ替えを両方させる案も検討したが、Jev が最も得意とする「候補から選ぶ」形に合い、実装が最も単純な本案を採った。
+Jev (TypeSafe's System One model) returns typed judgments and probabilities and cannot generate geographic routes. So code builds several loop Course Candidates with a routing API, and Jev only scores each candidate against the Dog Profile and Course Conditions so code can rank them. We also considered having Jev pick a course "policy" and building a single route from it, and doing both; we chose ranking because selecting among candidates is what Jev is built for and it is the simplest shape to implement.

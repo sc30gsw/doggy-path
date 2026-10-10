@@ -1,48 +1,73 @@
 # doggy-path
 
-犬の散歩コースを提案するアプリ。飼い主と犬の情報、その日の気分や状態から、その犬に合った散歩コースを提案する。
+An app that proposes dog-walking courses. It suggests a course that suits the dog, based on the Owner's and the dog's information and on how they are doing today.
 
-## 犬
+Japanese UI labels are shown in parentheses where the app uses a fixed term.
 
-**犬プロフィール**:
-飼い主が登録する犬の情報。犬の名前・犬種・年齢・性別・体重・犬メモからなる。1人の飼い主につき1匹。
-_Avoid_: ペット情報、犬データ
+## People and dogs
 
-**犬メモ**:
-犬プロフィールに含まれる、継続的な事実の自由記述（性格、持病、体調の傾向など）。
-_Avoid_: 備考
+**Owner** (飼い主):
+The person who uses the app and walks the dog. Has an account and exactly one Dog Profile.
+_Avoid_: User, account
 
-## 散歩コースの提案
+**Dog Profile**:
+The Owner's record of their dog: name, Breed, Birth Month, sex, weight, and Dog Memo. One per Owner.
+_Avoid_: Pet info, dog data
 
-**散歩コース**:
-開始地点を出発して開始地点に戻る、周回する1本の道順。このアプリが提案する単位。
-_Avoid_: ルート、道順
+**Breed** (犬種):
+The dog's breed, chosen from a fixed list, or "Mixed" (ミックス), or "Other" (その他) with free text.
 
-**コース候補**:
-提案の過程で作られる散歩コースの候補。その中から、今日の条件に合うものが選ばれ、並べ替えられて飼い主に示される。
-_Avoid_: 案、ルート候補
+**Birth Month**:
+The year and month the dog was born. May be marked as estimated when the exact date is unknown. The dog's age is always derived from it.
+_Avoid_: Age (as a stored value)
 
-**コース条件**:
-飼い主が散歩コースの提案を求めるときに入力する、その日の希望のまとまり。気分・今日のメモ・目標距離・目標時間・開始地点からなり、どれも空でよい。
-_Avoid_: 散歩設定、検索条件
+**Dog Memo** (犬メモ):
+Free text in the Dog Profile about lasting facts: temperament, chronic illness, health tendencies.
+_Avoid_: Notes, remarks (備考)
 
-**気分**:
-コース条件の一部で、飼い主（人間）のその日の気分。決められた選択肢から1つ選ぶ。
-_Avoid_: ムード、テンション
+## Proposing a course
 
-**今日のメモ**:
-コース条件に含まれる、その日限りの状況の自由記述（天気、ダイエット中、最近散歩に行けていない、など）。
-_Avoid_: 備考
+**Walk Course** (散歩コース):
+A single loop that starts and ends at the Start Point. The unit the app proposes.
+_Avoid_: Route, path
 
-**目標距離**:
-コース条件の一部で、飼い主が希望する散歩コースの長さ。
+**Course Candidate**:
+A Walk Course produced while building a proposal. Candidates are ranked against today's situation, and the best ones are shown to the Owner.
+_Avoid_: Option, route candidate
 
-**目標時間**:
-コース条件の一部で、飼い主が希望する散歩の所要時間。
+**Course Conditions** (コース条件):
+What the Owner enters when asking for a proposal: Mood, Today's Memo, Target Distance, Target Time, and Start Point. Every part may be left empty.
+_Avoid_: Walk settings, search criteria
 
-**開始地点**:
-散歩コースの出発点であり終着点。
-_Avoid_: スタート地点、出発地
+**Mood** (気分):
+How the Owner (the human, not the dog) feels today, picked from a fixed set.
+_Avoid_: Tension, vibe
 
-**デフォルト地点**:
-開始地点が入力されず、現在地も前回の開始地点も使えないときに使う、アプリ固定の地点。
+**Today's Memo** (今日のメモ):
+Free text in the Course Conditions about today only: weather, a diet, not having walked recently.
+_Avoid_: Notes, remarks (備考)
+
+**Target Distance** (目標距離):
+The course length the Owner wants.
+
+**Target Time** (目標時間):
+How long the Owner wants the walk to take.
+
+**Start Point** (開始地点):
+Where a Walk Course begins and ends.
+_Avoid_: Origin, departure point
+
+**Default Point**:
+A fixed place used as the Start Point when none is entered, current location is unavailable, and there is no previous Start Point.
+
+**Condition Check**:
+A judgment made before proposing, on whether the Course Conditions are consistent with each other and safe for the dog. A failed check produces a warning; the Owner may continue anyway.
+
+**Walking Pace**:
+How fast this dog typically walks: slow, normal, or brisk. Used to turn a Target Time into a distance.
+
+**Body Fit**:
+How well a Course Candidate suits the dog's body today, given its Dog Profile and Today's Memo.
+
+**Mood Fit**:
+How well a Course Candidate suits the Owner's Mood.

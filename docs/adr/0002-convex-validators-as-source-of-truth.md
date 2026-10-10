@@ -1,3 +1,3 @@
-# データ型の定義元は Convex のバリデータ、Valibot は境界の入力チェックにだけ使う
+# Convex validators are the source of truth; Valibot only guards the edges
 
-Convex の関数引数とスキーマは Convex 標準の `v` バリデータで定義し、これをデータ型の唯一の定義元とする。Valibot は、アプリ側の入力フォームのチェックと、Jev やルート検索 API など外部から入ってくるデータのチェックにだけ使う。Convex の引数チェックまで Valibot に統一する案や、Valibot のスキーマから `v` を生成する案は、Convex が自動で付ける型やスキーマとのつながりを失うか、自前の変換コードを抱えることになるため採らなかった。2つの検証ライブラリが共存しているのは意図した分担である。
+Convex function arguments and the database schema are defined with Convex's own `v` validators, which are the single source of truth for data shapes. Valibot is used only to validate form input in the app and data coming in from outside (Jev responses, routing API responses). We rejected validating Convex arguments with Valibot, and generating `v` validators from Valibot schemas, because the first loses the types and schema linkage Convex derives for us and the second means owning a home-made converter. Having two validation libraries is a deliberate split, not an oversight.

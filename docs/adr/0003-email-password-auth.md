@@ -1,3 +1,3 @@
-# 認証は Convex Auth のメールアドレス・パスワード方式
+# Owners sign in with email and password via Convex Auth
 
-飼い主のアカウントは Convex Auth のメールアドレス・パスワード方式で作る。ログインなしで使える匿名認証で始める案もあったが、犬プロフィールを端末の変更をまたいで確実に引き継げるよう、最初からアカウントを作ってもらう方式を選んだ。
+Owner accounts use Convex Auth's email and password provider. We considered starting with anonymous auth so people could use the app without signing up, but chose real accounts from day one so a Dog Profile survives a device change. Email verification and password reset are deliberately left out of the first version.
