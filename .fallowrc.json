@@ -2,6 +2,7 @@
   "$schema": "./node_modules/fallow/schema.json",
   "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**"],
   "ignoreDependencies": [
+    "@auth/core",
     "expo-constants",
     "expo-glass-effect",
     "expo-status-bar",

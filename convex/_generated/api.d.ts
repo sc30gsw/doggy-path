@@ -8,13 +8,27 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
+import type * as domain_breeds from "../domain/breeds.js";
+import type * as domain_dogProfile from "../domain/dogProfile.js";
+import type * as http from "../http.js";
+import type * as model_owners from "../model/owners.js";
+import type * as owners from "../owners.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
+  "domain/breeds": typeof domain_breeds;
+  "domain/dogProfile": typeof domain_dogProfile;
+  http: typeof http;
+  "model/owners": typeof model_owners;
+  owners: typeof owners;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

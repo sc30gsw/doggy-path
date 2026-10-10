@@ -1,9 +1,19 @@
-import { useColorScheme, View } from 'react-native';
+import { useAuthActions } from '@convex-dev/auth/react';
+import { Button, Host } from '@expo/ui';
 
-import { Colors } from '@/constants/theme';
+import { useSession } from '@/features/account/use-session';
+import { DogProfileForm } from '@/features/dog-profile/dog-profile-form';
 
 export default function ProfileScreen() {
-  const scheme = useColorScheme();
-  const palette = scheme === 'dark' ? Colors.dark : Colors.light;
-  return <View style={{ flex: 1, backgroundColor: palette.background }} />;
+  const session = useSession();
+  const { signOut } = useAuthActions();
+  if (session.kind !== 'ready') return null;
+  return (
+    <>
+      <DogProfileForm initial={session.owner} submitLabel="保存する" />
+      <Host matchContents>
+        <Button label="サインアウト" onPress={() => void signOut()} />
+      </Host>
+    </>
+  );
 }
