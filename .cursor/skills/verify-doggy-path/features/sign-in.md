@@ -12,7 +12,7 @@ Sign in lets an Owner create an account or enter an existing one with email and 
 
 ## How to get to it (user POV)
 
-- Cold launch while signed out. The stack guard shows the sign-in screen. There is no tab bar yet.
+- Cold launch while signed out. The stack guard shows the sign-in screen under the header `doggy-path`. There is no tab bar yet.
 - After `サインアウト` on the Profile tab, the same screen returns.
 
 ## Driving it with verify-doggy-path
@@ -21,19 +21,22 @@ Preconditions:
 
 - `verify-doggy-path doctor` reports `metro: up`, `convex-url: set`, and `worth-driving: yes`.
 - The Convex deployment is the development one in `.env.local`, and it is accepting auth requests.
-- Use a fresh email for `sign-up`. Use an email that already has a saved dog profile for `sign-in-existing`.
+- The Owner, not the agent, enters any password that reaches Convex. The agent drives only `sign-in-open` and `sign-in-validate`, then waits for the Owner's result screen.
 
-- **Open the screen.** Launch the native client at `exp://localhost:8081`. Run `verify-doggy-path drive sign-in`. When the result is `surface-ready`, the screen shows placeholders `メールアドレス` and `パスワード`, a button `ログイン`, and a button `アカウントを作る`.
-- **Reject a short password.** Type `owner@example.com` and `short`, then press `ログイン`. The text `パスワードは8文字以上にしてください` appears. No navigation happens.
-- **Reject a bad email.** Clear the email, type `not-an-email` and a password of at least 8 characters, then press `ログイン`. The text `メールアドレスの形式が正しくありません` appears.
-- **Create an account.** Press `アカウントを作る`. The submit button label becomes `登録してはじめる`. Enter a new email and a password of at least 8 characters, then press `登録してはじめる`. The onboarding screen appears, with section titles `飼い主` and `わんちゃん` and the button `はじめる`.
-- **Reject unknown credentials.** From a signed-out screen, press `ログインに戻る` if the form is in the sign-up flow. Enter an unknown email and a password of at least 8 characters, then press `ログイン`. The text `メールアドレスかパスワードが正しくありません` appears and the form stays put.
-- **Proof.** Save a screenshot of the validation error and a screenshot of onboarding after a successful registration under the run's evidence directory. The files include the feature id `sign-in` and the entry `cold-launch`.
+- **Open the screen.** Run `verify-doggy-path open dev-client`, then `verify-doggy-path drive sign-in`. When the result is `surface-ready`, the first group shows placeholders `メールアドレス` and `パスワード`, the second group shows the button `ログイン`, and the third group shows `アカウントを作る`.
+- **Reject a short password.** Switch the keyboard to English. Type `owner@example.com` into `メールアドレス` and `short` into `パスワード`, then press `ログイン`. The footer under the first group reads `パスワードは8文字以上にしてください`. No navigation happens.
+- **Reject a bad email.** Relaunch with `verify-doggy-path open dev-client` to clear the form. Type `not-an-email` and a password of at least 8 characters, then press `ログイン`. The footer reads `メールアドレスの形式が正しくありません`.
+- **Switch to sign-up.** Press `アカウントを作る`. The submit button reads `登録してはじめる` and the third group reads `ログインに戻る`.
+- **Create an account.** The Owner enters a new email and a password of at least 8 characters and presses `登録してはじめる`. The onboarding screen appears under the header `プロフィール登録`, with section titles `飼い主` and `わんちゃん` and the button `はじめる`.
+- **Reject unknown credentials.** The Owner presses `ログインに戻る` if needed, enters an unknown email, and presses `ログイン`. The footer reads `メールアドレスかパスワードが正しくありません` and the form stays put.
+- **Proof.** Save a screenshot of each validation footer and of onboarding after registration under the run's evidence directory, named with feature id `sign-in` and entry `cold-launch`.
 
 ## Gotchas
 
-- `verify-doggy-path drive sign-in` exiting 2 means no native surface was attached. That artifact records a blocked attempt. It does not prove sign-in.
-- Password storage uses `expo-secure-store`. A web preview is not available in this repo.
+- `verify-doggy-path drive sign-in` exiting 2 means no simulator was attached. That artifact records a blocked attempt. It does not prove sign-in.
 - The two flows share one form. `アカウントを作る` and `ログインに戻る` only change the submit label. They do not navigate.
+- An unknown email on `ログイン` makes Convex Auth throw `InvalidAccountId`. The development build also prints it as a red `[CONVEX A(auth:signIn)] Server Error` log in Metro and on screen. That is the expected rejection path, not a backend failure.
+- A field keeps its text across a validation error. Relaunch the client to start from an empty form.
 - A successful registration with no dog profile opens onboarding, not Home.
+- Expo Go keeps its own secure store. Its session is separate from the dev client's.
 - Do not commit the email, password, or `.env.local`.
