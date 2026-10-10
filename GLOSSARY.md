@@ -65,7 +65,7 @@ _Avoid_: Origin, departure point
 A fixed place used as the Start Point when none is entered, current location is unavailable, and there is no previous Start Point.
 
 **Condition Check**:
-A judgment made before proposing, on whether the Course Conditions are consistent with each other and safe for the dog. A failed check produces a warning; the Owner may continue anyway.
+The check made before proposing: whether the Target Distance and Target Time agree with each other, and whether the walk is too much for the dog today. A failed check produces a warning; the Owner may continue anyway.
 
 **Walking Pace**:
 How fast this dog typically walks: slow, normal, or brisk. Used to turn a Target Time into a distance.
@@ -75,3 +75,7 @@ How well a Course Candidate suits the dog's body today, given its Dog Profile an
 
 **Mood Fit**:
 How well a Course Candidate suits the Owner's Mood.
+
+**Unsuitable** (今日は不向き):
+A Course Candidate with a clear, specific problem for the dog today, such as hills for a dog with weak joints. It is shown last, whatever its Body Fit and Mood Fit.
+_Avoid_: Dangerous, unsafe

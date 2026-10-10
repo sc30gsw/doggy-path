@@ -1,6 +1,7 @@
 import { v, type Infer } from 'convex/values';
 
 import { latLngValidator } from './courseConditions';
+import { RETRY_COOLDOWN_MS } from './tuning';
 import { lengthDecisionValidator, walkingPaceValidator } from './walk';
 
 export const conditionWarningValidator = v.union(
@@ -37,8 +38,15 @@ export type Course = Infer<typeof courseValidator>;
 
 export const MAX_PATH_POINTS = 300;
 
-/** Jev Score positions in [0, 1]. `mood` is null when the Owner gave no Mood. */
-export const fitValidator = v.object({ body: v.number(), mood: v.union(v.null(), v.number()) });
+/**
+ * Jev judgments of one course, each in [0, 1]: `body` and `mood` are Score positions toward the
+ * best level, `mood` is null when the Owner gave no Mood, and `unsuitable` is a Noul probability.
+ */
+export const fitValidator = v.object({
+  body: v.number(),
+  mood: v.union(v.null(), v.number()),
+  unsuitable: v.number(),
+});
 export type Fit = Infer<typeof fitValidator>;
 
 export const courseScoringValidator = v.union(
@@ -71,12 +79,14 @@ export const proposalStateValidator = v.union(
     phase: v.literal('failed'),
     failedDuring: v.literal('checking'),
     reason: failureReasonValidator,
+    failedAt: v.number(),
   }),
   v.object({
     phase: v.literal('failed'),
     failedDuring: v.literal('building'),
     assessment: assessmentValidator,
     reason: failureReasonValidator,
+    failedAt: v.number(),
   }),
 );
 export type ProposalState = Infer<typeof proposalStateValidator>;
@@ -104,9 +114,11 @@ export function isWorking(state: ProposalState): boolean {
 export function advance({
   state,
   event,
+  now,
 }: {
   state: ProposalState;
   event: ProposalEvent;
+  now: number;
 }): Transition | null {
   switch (event.type) {
     case 'assessed':
@@ -126,7 +138,7 @@ export function advance({
     case 'failed':
       if (state.phase === 'checking') {
         return {
-          next: { phase: 'failed', failedDuring: 'checking', reason: event.reason },
+          next: { phase: 'failed', failedDuring: 'checking', reason: event.reason, failedAt: now },
           startRun: false,
         };
       }
@@ -137,13 +149,14 @@ export function advance({
             failedDuring: 'building',
             assessment: state.assessment,
             reason: event.reason,
+            failedAt: now,
           },
           startRun: false,
         };
       }
       return null;
     case 'retryRequested':
-      if (state.phase !== 'failed') return null;
+      if (state.phase !== 'failed' || now < retryableAt(state)) return null;
       return state.failedDuring === 'checking'
         ? { next: { phase: 'checking' }, startRun: true }
         : { next: { phase: 'building', assessment: state.assessment }, startRun: true };
@@ -152,4 +165,8 @@ export function advance({
       return _exhaustive;
     }
   }
+}
+
+export function retryableAt(state: Extract<ProposalState, { phase: 'failed' }>): number {
+  return state.failedAt + RETRY_COOLDOWN_MS;
 }

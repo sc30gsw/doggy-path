@@ -14,8 +14,8 @@ export type ProposalScreen =
       warnings: ConditionWarning[];
       proceed: () => Promise<null>;
     }
-  | { phase: 'ready'; startPoint: ResolvedStartPoint; shown: ShownCourses }
-  | { phase: 'failed'; reason: FailureReason; retry: () => Promise<null> };
+  | { phase: 'ready'; dogName: string; startPoint: ResolvedStartPoint; shown: ShownCourses }
+  | { phase: 'failed'; reason: FailureReason; retryableAt: number; retry: () => Promise<null> };
 
 export function useProposal(): ProposalScreen {
   const view = useQuery(api.proposals.current);
@@ -36,11 +36,17 @@ export function useProposal(): ProposalScreen {
         proceed: () => proceed({ proposalId: view.id }),
       };
     case 'ready':
-      return { phase: 'ready', startPoint: view.startPoint, shown: status.shown };
+      return {
+        phase: 'ready',
+        dogName: view.dogName,
+        startPoint: view.startPoint,
+        shown: status.shown,
+      };
     case 'failed':
       return {
         phase: 'failed',
         reason: status.reason,
+        retryableAt: status.retryableAt,
         retry: () => retry({ proposalId: view.id }),
       };
     default: {

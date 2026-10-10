@@ -21,7 +21,12 @@ import {
   type Transition,
 } from '../domain/proposal';
 import { toProposalView, type ProposalView } from '../domain/proposalView';
-import { PREVIOUS_START_POINT_LOOKBACK, RUN_TIMEOUT_MS } from '../domain/tuning';
+import {
+  DAILY_PROPOSAL_CAP,
+  DAILY_PROPOSAL_WINDOW_MS,
+  RETAINED_PROPOSAL_COUNT,
+  RUN_TIMEOUT_MS,
+} from '../domain/tuning';
 import { loadOwner } from './owners';
 
 export type RunInput =
@@ -59,6 +64,11 @@ export async function requestProposal(
   const latest = await latestProposal(ctx, { userId });
   if (latest !== null && isWorking(latest.state)) return latest._id;
 
+  const now = Date.now();
+  if (await reachedDailyCap(ctx, { userId, now })) {
+    throw new ConvexError({ kind: 'dailyLimitReached' });
+  }
+
   const startPoint = resolveStartPoint({
     chosen: conditions.chosenStartPoint,
     deviceLocation,
@@ -74,6 +84,7 @@ export async function requestProposal(
     state: INITIAL_TRANSITION.next,
   });
   await startRun(ctx, { proposalId, attempt });
+  await dropProposalsBeyondRetention(ctx, { userId });
   return proposalId;
 }
 
@@ -84,7 +95,7 @@ export async function applyOwnerEvent(
 ): Promise<void> {
   const latest = await latestProposal(ctx, { userId });
   if (latest === null || latest._id !== proposalId) return;
-  const transition = advance({ state: latest.state, event });
+  const transition = advance({ state: latest.state, event, now: Date.now() });
   if (transition !== null) await commit(ctx, { doc: latest, transition });
 }
 
@@ -95,7 +106,7 @@ export async function recordRunEvent(
 ): Promise<void> {
   const doc = await ctx.db.get('proposals', proposalId);
   if (doc === null || doc.attempt !== attempt) return;
-  const transition = advance({ state: doc.state, event });
+  const transition = advance({ state: doc.state, event, now: Date.now() });
   if (transition !== null) await commit(ctx, { doc, transition });
 }
 
@@ -141,8 +152,34 @@ async function previousStartPoint(
     .query('proposals')
     .withIndex('by_user', (q) => q.eq('userId', userId))
     .order('desc')
-    .take(PREVIOUS_START_POINT_LOOKBACK);
+    .take(RETAINED_PROPOSAL_COUNT);
   return recent.find((proposal) => proposal.startPoint.source !== 'default')?.startPoint.point;
+}
+
+async function reachedDailyCap(
+  ctx: QueryCtx,
+  { userId, now }: { userId: Id<'users'>; now: number },
+): Promise<boolean> {
+  const recent = await ctx.db
+    .query('proposals')
+    .withIndex('by_user', (q) =>
+      q.eq('userId', userId).gt('_creationTime', now - DAILY_PROPOSAL_WINDOW_MS),
+    )
+    .take(DAILY_PROPOSAL_CAP);
+  return recent.length >= DAILY_PROPOSAL_CAP;
+}
+
+async function dropProposalsBeyondRetention(
+  ctx: MutationCtx,
+  { userId }: { userId: Id<'users'> },
+): Promise<void> {
+  const kept = await ctx.db
+    .query('proposals')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .order('desc')
+    .take(RETAINED_PROPOSAL_COUNT + 1);
+  const beyond = kept[RETAINED_PROPOSAL_COUNT];
+  if (beyond !== undefined) await ctx.db.delete('proposals', beyond._id);
 }
 
 async function commit(

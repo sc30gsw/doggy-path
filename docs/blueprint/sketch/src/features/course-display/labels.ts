@@ -10,6 +10,13 @@ export const REASON_LABELS: Record<FitKind, string> = {
 
 export const BY_LENGTH_NOTICE = 'おすすめ順ではありません';
 
+export const UNSUITABLE_LABEL = '今日は不向きかもしれません';
+
+export const allUnsuitableNotice = (dogName: string): string =>
+  `今日の${dogName}には、どのコースも負担が大きいかもしれません`;
+
+export const retryCountdownLabel = (seconds: number): string => `${seconds}秒後にもう一度試せます`;
+
 export const WARNING_LABELS: Record<ConditionWarning, string> = {
   targetsInconsistent: '距離と時間の組み合わせが合っていないかもしれません',
   tooMuchLoad: '今日のわんちゃんには負担が大きいかもしれません',

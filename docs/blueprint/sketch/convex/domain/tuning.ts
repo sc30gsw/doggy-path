@@ -2,6 +2,10 @@ import type { LengthClass, WalkingPace } from './walk';
 
 export const CONDITION_CHECK_THRESHOLD = 0.6;
 
+export const TARGETS_PACE_RATIO_LIMIT = 1.5;
+
+export const UNSUITABLE_THRESHOLD = 0.6;
+
 export const FIT_WEIGHTS = { body: 0.6, mood: 0.4 } as const;
 
 export const CANDIDATE_COUNT = 5;
@@ -20,4 +24,9 @@ export const CALL_TIMEOUT_MS = { jev: 15_000, ors: 30_000, overpass: 25_000 } as
 const SLOWEST_RUN_MS = CALL_TIMEOUT_MS.ors + CALL_TIMEOUT_MS.overpass + CALL_TIMEOUT_MS.jev;
 export const RUN_TIMEOUT_MS = 2 * SLOWEST_RUN_MS;
 
-export const PREVIOUS_START_POINT_LOOKBACK = 20;
+export const RETRY_COOLDOWN_MS = 60_000;
+
+export const DAILY_PROPOSAL_CAP = 10;
+export const DAILY_PROPOSAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export const RETAINED_PROPOSAL_COUNT = 2 * DAILY_PROPOSAL_CAP;

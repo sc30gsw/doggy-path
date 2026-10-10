@@ -30,8 +30,7 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
-  readonly JEV_API_URL: string;
-  readonly JEV_API_KEY: string;
+  readonly TYPESAFE_API_KEY: string;
   readonly ORS_API_KEY: string;
   readonly OVERPASS_API_URL?: string;
   readonly JWT_PRIVATE_KEY: string;

@@ -3,14 +3,6 @@ import { v, type Infer } from 'convex/values';
 export const MOOD_IDS = ['relaxed', 'energetic', 'adventurous', 'tired', 'refresh'] as const;
 export type Mood = (typeof MOOD_IDS)[number];
 
-export const MOOD_LABELS: Record<Mood, string> = {
-  relaxed: 'のんびり',
-  energetic: '元気いっぱい',
-  adventurous: '冒険したい',
-  tired: '疲れ気味',
-  refresh: '気分転換',
-};
-
 export const moodValidator = v.union(...MOOD_IDS.map((id) => v.literal(id)));
 
 export const latLngValidator = v.object({ latitude: v.number(), longitude: v.number() });

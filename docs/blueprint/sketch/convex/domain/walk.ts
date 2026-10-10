@@ -1,7 +1,7 @@
 import { v, type Infer } from 'convex/values';
 
 import type { CourseConditions } from './courseConditions';
-import { LENGTH_CLASSES, WALKING_PACE_KMH } from './tuning';
+import { LENGTH_CLASSES, TARGETS_PACE_RATIO_LIMIT, WALKING_PACE_KMH } from './tuning';
 
 export const walkingPaceValidator = v.union(
   v.literal('slow'),
@@ -55,6 +55,20 @@ export function targetLengthM({
       return _exhaustive;
     }
   }
+}
+
+export function targetsAreConsistent({
+  targetDistanceM,
+  targetTimeMin,
+  pace,
+}: {
+  targetDistanceM: number;
+  targetTimeMin: number;
+  pace: WalkingPace;
+}): boolean {
+  const impliedKmh = targetDistanceM / 1000 / (targetTimeMin / 60);
+  const ratio = impliedKmh / WALKING_PACE_KMH[pace];
+  return ratio <= TARGETS_PACE_RATIO_LIMIT && ratio >= 1 / TARGETS_PACE_RATIO_LIMIT;
 }
 
 const ESTIMATE_STEP_MIN = 5;

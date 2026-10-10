@@ -26,9 +26,13 @@ export default function HomeScreen(): React.ReactElement | null {
         />
       );
     case 'ready':
-      return <ReadyView startPoint={screen.startPoint} shown={screen.shown} />;
+      return (
+        <ReadyView dogName={screen.dogName} startPoint={screen.startPoint} shown={screen.shown} />
+      );
     case 'failed':
-      return <FailedView reason={screen.reason} onRetry={screen.retry} />;
+      return (
+        <FailedView reason={screen.reason} retryableAt={screen.retryableAt} onRetry={screen.retry} />
+      );
     default: {
       const unhandled: never = screen;
       return unhandled;
