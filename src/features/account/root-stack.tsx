@@ -21,6 +21,15 @@ export function RootStack() {
       </Stack.Protected>
       <Stack.Protected guard={session.kind === 'ready'}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="conditions"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.92],
+            sheetGrabberVisible: true,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );
