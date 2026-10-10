@@ -1,4 +1,3 @@
-/** HTTP routes: only Convex Auth's. */
 import { httpRouter } from 'convex/server';
 
 import { auth } from './auth';

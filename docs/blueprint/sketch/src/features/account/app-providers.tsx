@@ -1,13 +1,3 @@
-/**
- * Every app-wide provider, in one place. `src/app/_layout.tsx` becomes (Feature 1):
- *
- *   export default function RootLayout() {
- *     return (<AppProviders><AnimatedSplashOverlay /><RootStack /></AppProviders>);
- *   }
- *
- * The Convex client moves here from `_layout.tsx` unchanged; `ConvexProvider` becomes
- * `ConvexAuthProvider` (it wraps ConvexProvider and adds auth).
- */
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
 import { ConvexReactClient } from 'convex/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';

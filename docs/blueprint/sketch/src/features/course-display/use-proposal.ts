@@ -1,11 +1,3 @@
-/**
- * The Owner's current proposal as one union for Home. Each phase carries only the actions
- * that are valid in it: `proceed` exists only while a Condition Check warning waits, and
- * `retry` only after a failure, so calling either at the wrong time is a compile error.
- *
- *   const screen = useProposal();
- *   switch (screen.phase) { ... }   // exhaustive; see src/app/(tabs)/index.tsx
- */
 import { useMutation, useQuery } from 'convex/react';
 
 import { api } from '@/convex/_generated/api';
@@ -15,13 +7,11 @@ import type { ShownCourses } from '@/convex/domain/proposalView';
 
 export type ProposalScreen =
   | { phase: 'loading' }
-  /** No proposal yet: Home shows only 「コースを提案してもらう」. */
   | { phase: 'none' }
   | { phase: 'working'; step: 'checking' | 'building' }
   | {
       phase: 'needsConfirmation';
       warnings: ConditionWarning[];
-      /** 「このまま作る」. */
       proceed: () => Promise<null>;
     }
   | { phase: 'ready'; startPoint: ResolvedStartPoint; shown: ShownCourses }

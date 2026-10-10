@@ -1,45 +1,24 @@
-/**
- * The Owner and their one Dog Profile. This file is the only writer of the `owners` table.
- *
- * Client usage:
- *   const owner = useQuery(api.owners.mine);              // undefined | null | Owner
- *   const save = useMutation(api.owners.save);
- *   await save({ owner: parsedForm });                     // onboarding AND Profile tab
- */
 import { mutation, query } from './_generated/server';
-import { findOwnerId, requireOwnerId } from './auth';
 import { ownerValidator, type Owner } from './domain/dogProfile';
+import { findOwnerId, loadOwner, requireOwnerId, saveOwner } from './model/owners';
 
-/**
- * The signed-in Owner, or null when onboarding is not done yet.
- * Returns null (not throws) when signed out, so the session gate can call it unconditionally.
- */
+/** null when signed out or before onboarding, so the session gate can call it unconditionally. */
 export const mine = query({
   args: {},
   handler: async (ctx): Promise<Owner | null> => {
-    void findOwnerId;
-    void ctx;
-    // TODO: userId = await findOwnerId(ctx); null → null;
-    //       row = owners.by_user(userId).unique(); row ? { ownerName: row.ownerName, dog: row.dog } : null.
-    throw new Error('not implemented');
+    const userId = await findOwnerId(ctx);
+    if (userId === null) return null;
+    const row = await loadOwner(ctx, { userId });
+    return row === null ? null : { ownerName: row.ownerName, dog: row.dog };
   },
 });
 
-/**
- * Create-or-replace (idempotent upsert). Same mutation for onboarding and later edits,
- * so "one Dog Profile per Owner" has exactly one enforcement point.
- */
+/** Create-or-replace. */
 export const save = mutation({
   args: { owner: ownerValidator },
-  handler: async (ctx, args): Promise<null> => {
-    void args;
+  handler: async (ctx, { owner }): Promise<null> => {
     const userId = await requireOwnerId(ctx);
-    void userId;
-    // TODO: const problems = findOwnerProblems(args.owner, new Date());
-    //       if (problems.length) throw new ConvexError({ problems });
-    //       existing = owners.by_user(userId).unique();
-    //       existing ? db.replace(existing._id, { userId, ...args.owner })
-    //                : db.insert('owners', { userId, ...args.owner }).
-    throw new Error('not implemented');
+    await saveOwner(ctx, { userId, owner });
+    return null;
   },
 });

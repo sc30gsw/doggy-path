@@ -1,13 +1,8 @@
-/**
- * Japanese copy for the proposal's server-side codes. Each table is a `Record` over the
- * domain union, so a new reason/warning/failure fails the build here until it has copy.
- */
 import { DEFAULT_POINT_NAME, type ResolvedStartPoint } from '@/convex/domain/courseConditions';
 import type { ConditionWarning, FailureReason } from '@/convex/domain/proposal';
 import type { ProposalStatus } from '@/convex/domain/proposalView';
 import type { FitKind } from '@/convex/domain/ranking';
 
-/** The reason label on each recommended course: the higher of Body Fit / Mood Fit. */
 export const REASON_LABELS: Record<FitKind, string> = {
   body: 'わんちゃんの体に合っています',
   mood: '今日の気分にぴったり',

@@ -1,7 +1,3 @@
-/**
- * Where the Owner is in the app's lifecycle, as one value. The root stack's guards and
- * the Profile tab read this; nothing else checks auth or onboarding.
- */
 import { useConvexAuth, useQuery } from 'convex/react';
 
 import { api } from '@/convex/_generated/api';

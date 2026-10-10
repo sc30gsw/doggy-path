@@ -1,32 +1,27 @@
-/**
- * Overpass API: one query per proposal for parks/green areas and main roads around the
- * Start Point. PRIVATE to `convex/courseBuilder/`. Returns plain geometry, no OSM tags.
- */
 import * as vb from 'valibot';
 
+import { env } from '../../_generated/server';
 import type { LatLng } from '../../domain/courseConditions';
+import { CALL_TIMEOUT_MS } from '../../domain/tuning';
+
+const PUBLIC_OVERPASS_API_URL = 'https://overpass-api.de/api/interpreter';
 
 export type BoundingBox = { south: number; west: number; north: number; east: number };
 
 export type Surroundings = {
-  /** Outer rings of parks, gardens, green areas. */
   greenAreas: LatLng[][];
-  /** Polylines of main roads (primary/secondary/trunk). */
   mainRoads: LatLng[][];
 };
 
-/** Resolves null on any failure: surroundings are nice-to-have, never fatal. */
+/** null on any failure: surroundings enrich a course and never fail a proposal. */
 export async function fetchSurroundings(box: BoundingBox): Promise<Surroundings | null> {
   void box;
+  void (env.OVERPASS_API_URL ?? PUBLIC_OVERPASS_API_URL);
+  void CALL_TIMEOUT_MS.overpass;
   void overpassResponseSchema;
-  // TODO: POST https://overpass-api.de/api/interpreter with [out:json][timeout:20];
-  //       (way[leisure~"^(park|garden)$"](bbox); way[landuse~"^(grass|forest|recreation_ground)$"](bbox);
-  //        way[highway~"^(trunk|primary|secondary)$"](bbox);); out geom;
-  //       User-Agent identifying the app (fair-use); AbortSignal.timeout(25_000).
   throw new Error('not implemented');
 }
 
-/** Private. */
 const overpassResponseSchema = vb.object({
   elements: vb.array(
     vb.object({

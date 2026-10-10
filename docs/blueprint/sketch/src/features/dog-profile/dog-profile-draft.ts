@@ -1,21 +1,22 @@
-/**
- * The onboarding / Profile form's draft and its one parser. Output type is `Owner`
- * (the Owner's name + their Dog Profile), the Convex-derived type (ADR 0002): if the
- * Valibot schema and the Convex validator drift, `parseDogProfileDraft` stops compiling.
- */
 import * as vb from 'valibot';
 
-import type { Breed, Owner, Sex } from '@/convex/domain/dogProfile';
-import { DOG_PROFILE_LIMITS } from '@/convex/domain/dogProfile';
+import {
+  DOG_PROFILE_LIMITS,
+  MONTHS,
+  SEXES,
+  type Breed,
+  type Month,
+  type Owner,
+  type Sex,
+} from '@/convex/domain/dogProfile';
 import { parseForm, type FormResult } from '@/lib/parse-form';
 
-/** What the inputs hold while editing. Strings for text inputs; null = not chosen yet. */
 export type DogProfileDraft = {
   ownerName: string;
   dogName: string;
   breed: Breed | null;
   birthYear: number;
-  birthMonth: number;
+  birthMonth: Month;
   birthMonthEstimated: boolean;
   sex: Sex | null;
   weightKg: string;
@@ -24,38 +25,78 @@ export type DogProfileDraft = {
 
 export function emptyDogProfileDraft(now: Date): DogProfileDraft {
   void now;
-  // TODO: names '', breed null, birth year/month = now's, estimated false, sex null, weight '', memo ''.
   throw new Error('not implemented');
 }
 
-/** Profile tab: start editing from the saved Owner. */
 export function draftFromOwner(owner: Owner): DogProfileDraft {
   void owner;
   throw new Error('not implemented');
 }
 
-/** Private. Reads DOG_PROFILE_LIMITS; the server's findOwnerProblems reads the same table. */
-const dogProfileDraftSchema = vb.object({
-  ownerName: vb.pipe(vb.string(), vb.trim(), vb.nonEmpty('飼い主の名前を入力してください')),
-  dogName: vb.pipe(vb.string(), vb.trim(), vb.nonEmpty('わんちゃんの名前を入力してください')),
-  weightKg: vb.pipe(
-    vb.string(),
-    vb.trim(),
-    // TODO: '' → undefined; else number within DOG_PROFILE_LIMITS.weightKg
+const nameSchema = (message: string) =>
+  vb.pipe(vb.string(), vb.trim(), vb.nonEmpty(message), vb.maxLength(DOG_PROFILE_LIMITS.nameMaxLength));
+
+const breedSchema = vb.variant('kind', [
+  vb.object({ kind: vb.literal('jkc'), id: vb.string() }),
+  vb.object({ kind: vb.literal('mixed') }),
+  vb.object({
+    kind: vb.literal('other'),
+    text: vb.pipe(
+      vb.string(),
+      vb.trim(),
+      vb.nonEmpty('犬種を入力してください'),
+      vb.maxLength(DOG_PROFILE_LIMITS.otherBreedMaxLength),
+    ),
+  }),
+]);
+
+const weightKgSchema = vb.pipe(
+  vb.string(),
+  vb.trim(),
+  vb.transform((text) => (text === '' ? undefined : Number(text))),
+  vb.check(
+    (kg) =>
+      kg === undefined ||
+      (Number.isFinite(kg) &&
+        kg >= DOG_PROFILE_LIMITS.weightKg.min &&
+        kg <= DOG_PROFILE_LIMITS.weightKg.max),
+    `体重は${DOG_PROFILE_LIMITS.weightKg.min}〜${DOG_PROFILE_LIMITS.weightKg.max}kgで入力してください`,
   ),
-  // TODO: breed (non-null; other → non-empty text), birth year/month (not future,
-  //       ≥ earliestBirthYear), sex (non-null), dogMemo ('' → undefined, ≤ memoMaxLength),
-  //       then vb.transform to the Owner shape ({ ownerName, dog: { ... } }).
-});
+);
+
+const dogProfileDraftSchema = vb.pipe(
+  vb.object({
+    ownerName: nameSchema('飼い主の名前を入力してください'),
+    dogName: nameSchema('わんちゃんの名前を入力してください'),
+    breed: vb.nonNullable(vb.nullable(breedSchema), '犬種を選んでください'),
+    birthYear: vb.pipe(vb.number(), vb.integer(), vb.minValue(DOG_PROFILE_LIMITS.earliestBirthYear)),
+    birthMonth: vb.picklist(MONTHS),
+    birthMonthEstimated: vb.boolean(),
+    sex: vb.nonNullable(vb.nullable(vb.picklist(SEXES)), '性別を選んでください'),
+    weightKg: weightKgSchema,
+    dogMemo: vb.pipe(vb.string(), vb.trim(), vb.maxLength(DOG_PROFILE_LIMITS.memoMaxLength)),
+  }),
+  vb.transform(
+    (draft): Owner => ({
+      ownerName: draft.ownerName,
+      dog: {
+        dogName: draft.dogName,
+        breed: draft.breed,
+        birthMonth: {
+          year: draft.birthYear,
+          month: draft.birthMonth,
+          estimated: draft.birthMonthEstimated,
+        },
+        sex: draft.sex,
+        weightKg: draft.weightKg,
+        dogMemo: draft.dogMemo === '' ? undefined : draft.dogMemo,
+      },
+    }),
+  ),
+);
 
 export function parseDogProfileDraft(
   draft: DogProfileDraft,
 ): FormResult<Owner, keyof DogProfileDraft> {
-  void dogProfileDraftSchema;
-  void DOG_PROFILE_LIMITS;
-  void draft;
-  void parseForm;
-  // TODO: return parseForm(dogProfileDraftSchema, draft) once the schema ends in a
-  //       vb.transform producing Owner — the declared return type enforces the match.
-  throw new Error('not implemented');
+  return parseForm({ schema: dogProfileDraftSchema, draft });
 }

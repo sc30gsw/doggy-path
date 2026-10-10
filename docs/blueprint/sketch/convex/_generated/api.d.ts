@@ -33,6 +33,8 @@ import type * as http from "../http.js";
 import type * as judge_index from "../judge/index.js";
 import type * as judge_internal_jev from "../judge/internal/jev.js";
 import type * as judge_internal_questions from "../judge/internal/questions.js";
+import type * as model_owners from "../model/owners.js";
+import type * as model_proposals from "../model/proposals.js";
 import type * as owners from "../owners.js";
 import type * as proposalRuns from "../proposalRuns.js";
 import type * as proposals from "../proposals.js";
@@ -55,6 +57,8 @@ declare const fullApi: ApiFromModules<{
   "judge/index": typeof judge_index;
   "judge/internal/jev": typeof judge_internal_jev;
   "judge/internal/questions": typeof judge_internal_questions;
+  "model/owners": typeof model_owners;
+  "model/proposals": typeof model_proposals;
   "owners": typeof owners;
   "proposalRuns": typeof proposalRuns;
   "proposals": typeof proposals;

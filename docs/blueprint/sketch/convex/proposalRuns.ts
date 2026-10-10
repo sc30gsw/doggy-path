@@ -1,14 +1,3 @@
-/**
- * The one internal action that does a proposal's external work. Thin orchestration:
- * load → (judge | build + judge) → record. It never writes the database directly.
- *
- * Runs are idempotent by construction: `loadRun` returns null for a stale attempt, and
- * `record` drops events whose attempt no longer matches. A run that crashes reports
- * `internal`; a run that hangs is caught by the watchdog `startRun` scheduled.
- *
- * Blueprint note: this body is real wiring on purpose. It is the type-checked call site
- * for `judge/` and `courseBuilder/`; all the logic it calls is still `not implemented`.
- */
 import { v } from 'convex/values';
 
 import { buildCourseCandidates } from './courseBuilder';
@@ -40,7 +29,10 @@ export const run = internalAction({
         case 'building': {
           const built = await buildCourseCandidates({
             start: input.startPoint.point,
-            targetLengthM: targetLengthM(input.assessment.length, input.assessment.pace),
+            targetLengthM: targetLengthM({
+              length: input.assessment.length,
+              pace: input.assessment.pace,
+            }),
           });
           if (!built.ok) return await report({ type: 'failed', reason: built.reason });
           const scoring = await judgeCourseFits({
@@ -54,7 +46,14 @@ export const run = internalAction({
         }
       }
     } catch (error) {
-      console.error('proposal run failed', args, error);
+      console.error(
+        JSON.stringify({
+          event: 'proposalRunFailed',
+          proposalId: args.proposalId,
+          attempt: args.attempt,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       return await report({ type: 'failed', reason: 'internal' });
     }
   },

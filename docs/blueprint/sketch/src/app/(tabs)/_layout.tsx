@@ -1,7 +1,3 @@
-/**
- * Home and Profile tabs (iOS/Android only; the web tab bar is removed in Feature 0).
- * Replaces `src/components/app-tabs.tsx` — the tabs are defined where the routes live.
- */
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 export default function TabsLayout() {

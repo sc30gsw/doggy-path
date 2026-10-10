@@ -1,16 +1,4 @@
-/**
- * The whole route map and its access rules. Rendered by `src/app/_layout.tsx`.
- *
- *   signedOut    → sign-in
- *   needsProfile → onboarding          (the app is unusable until the Dog Profile exists)
- *   ready        → (tabs) [Home, Profile], conditions (form sheet)
- *
- * There is no proposal route: Home shows the Owner's current proposal (`useProposal`).
- *
- * `Stack.Protected` redirects automatically when the guard flips (sign-in completes,
- * onboarding saves, sign-out), so screens never navigate for auth reasons themselves.
- */
-import { Stack } from 'expo-router';
+import Stack from 'expo-router/stack';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -35,7 +23,12 @@ export function RootStack() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="conditions"
-          options={{ presentation: 'formSheet', sheetAllowedDetents: [0.92], sheetGrabberVisible: true }}
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.92],
+            sheetGrabberVisible: true,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
         />
       </Stack.Protected>
     </Stack>

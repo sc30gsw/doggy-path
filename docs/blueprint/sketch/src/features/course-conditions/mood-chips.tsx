@@ -1,10 +1,3 @@
-/**
- * Mood chips: order and labels come from `MOODS` (convex/domain/courseConditions.ts);
- * icons come from `MOOD_SYMBOLS` below. `MOOD_SYMBOLS` is a `Record<Mood, …>`, so adding a
- * Mood to the catalog fails this file's typecheck until it gets an icon.
- *
- * Custom chips because `@expo/ui` Picker items cannot hold icons.
- */
 import type { SymbolViewProps } from 'expo-symbols';
 
 import type { Mood } from '@/convex/domain/courseConditions';
@@ -24,7 +17,5 @@ export function MoodChips(props: {
 }): React.ReactElement {
   void props;
   void MOOD_SYMBOLS;
-  // TODO: MOODS.map(({ id, ja }) => <Pressable accessibilityRole="radio" accessibilityState={{ selected }}>
-  //         <SymbolView name={MOOD_SYMBOLS[id]} /> <ThemedText>{ja}</ThemedText></Pressable>), wrapping row.
   throw new Error('not implemented');
 }
