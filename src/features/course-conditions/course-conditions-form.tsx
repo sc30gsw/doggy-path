@@ -11,6 +11,7 @@ import {
 import { REFUSAL_LABELS } from '@/features/course-conditions/labels';
 import { MoodChips } from '@/features/course-conditions/mood-chips';
 import { StartPointField } from '@/features/course-conditions/start-point-field';
+import { useRequestProposal } from '@/features/course-conditions/use-request-proposal';
 
 export function CourseConditionsForm(props: {
   initial?: CourseConditions;
@@ -21,7 +22,8 @@ export function CourseConditionsForm(props: {
   );
   const [errors, setErrors] = useState<Partial<Record<keyof ConditionsDraft, string>>>({});
   const [pending, setPending] = useState(false);
-  const [refusal] = useState<keyof typeof REFUSAL_LABELS | undefined>();
+  const [refusal, setRefusal] = useState<keyof typeof REFUSAL_LABELS | undefined>();
+  const requestProposal = useRequestProposal();
 
   const submit = () => {
     const parsed = parseConditionsDraft(draft);
@@ -31,7 +33,15 @@ export function CourseConditionsForm(props: {
     }
     setPending(true);
     setErrors({});
-    props.onRequested();
+    setRefusal(undefined);
+    void requestProposal(parsed.value).then((outcome) => {
+      setPending(false);
+      if (!outcome.ok) {
+        setRefusal(outcome.refusal);
+        return;
+      }
+      props.onRequested();
+    });
   };
 
   return (

@@ -1,5 +1,7 @@
-const DAILY_PROPOSAL_CAP = 10;
+import { DAILY_PROPOSAL_CAP } from '@/convex/domain/tuning';
 
-export const REFUSAL_LABELS = {
+import type { RequestOutcome } from './use-request-proposal';
+
+export const REFUSAL_LABELS: Record<Extract<RequestOutcome, { ok: false }>['refusal'], string> = {
   dailyLimitReached: `今日の提案は上限（${DAILY_PROPOSAL_CAP}回）に達しました。明日また試してください`,
-} as const;
+};
