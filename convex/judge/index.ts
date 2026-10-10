@@ -2,7 +2,7 @@ import type { CourseConditions } from '../domain/courseConditions';
 import type { DogProfile } from '../domain/dogProfile';
 import type { Assessment, ConditionWarning, Course, CourseScoring } from '../domain/proposal';
 import { lengthBasisOf, targetsAreConsistent, type WalkingPace } from '../domain/walk';
-import { askJev, type AskJev } from './internal/jev';
+import { askJev, type AskJev, type JevFailure } from './internal/jev';
 import {
   conditionQuestions,
   dogState,
@@ -29,6 +29,7 @@ export async function judgeConditions({
     state: { dog: dogState({ dog, now }), today: todayState(conditions) },
     questions: conditionQuestions(),
   });
+  if (!result.ok) logJevFailure(result.failure);
   const assessment = result.ok
     ? interpretConditions({ basis, answers: result.answers })
     : fallbackAssessment(basis);
@@ -36,6 +37,10 @@ export async function judgeConditions({
     ...assessment,
     warnings: [...targetsWarnings({ conditions, pace: assessment.pace }), ...assessment.warnings],
   };
+}
+
+function logJevFailure(failure: JevFailure): void {
+  console.error(JSON.stringify({ event: 'jevFailed', failure }));
 }
 
 function targetsWarnings({
@@ -71,7 +76,10 @@ export async function judgeCourseFits({
     state: { dog: dogState({ dog, now }), today: todayState(conditions) },
     questions: fitQuestions({ courses, pace: assessment.pace, hasMood }),
   });
-  if (!result.ok) return { kind: 'byLength', courses: [...courses] };
+  if (!result.ok) {
+    logJevFailure(result.failure);
+    return { kind: 'byLength', courses: [...courses] };
+  }
   return {
     kind: 'byFit',
     scored: courses.map((course) => ({

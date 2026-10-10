@@ -130,8 +130,12 @@ export async function requestRoundTrip({
       body: JSON.stringify(roundTripRequestBody({ start, requestedLengthM, seed })),
       signal: AbortSignal.timeout(CALL_TIMEOUT_MS.ors),
     });
+    if (!response.ok) {
+      const errorBody: unknown = await response.json().catch(() => null);
+      return toFailedRoundTrip(errorBody);
+    }
     const body: unknown = await response.json().catch(() => null);
-    return response.ok ? toRoundTripResult({ seed, body }) : toFailedRoundTrip(body);
+    return toRoundTripResult({ seed, body });
   } catch {
     return { kind: 'unavailable' };
   }
