@@ -1,0 +1,3 @@
+# Convex validators are the source of truth; Valibot only guards the edges
+
+Convex function arguments and the database schema are defined with Convex's own `v` validators, which are the single source of truth for data shapes. Valibot is used only to validate form input in the app and data coming in from outside (Jev responses, routing API responses). We rejected validating Convex arguments with Valibot, and generating `v` validators from Valibot schemas, because the first loses the types and schema linkage Convex derives for us and the second means owning a home-made converter. Having two validation libraries is a deliberate split, not an oversight.

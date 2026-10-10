@@ -1,0 +1,3 @@
+# Course Candidates come from OpenRouteService, hidden behind one module
+
+Course Candidates are built with OpenRouteService's round-trip directions on its free Standard plan (2,000 requests/day, 40/min), with park and main-road data for Body Fit and Mood Fit taken from the public Overpass API. Only OpenRouteService and GraphHopper build loop routes natively; Mapbox, Google Routes and Stadia Maps (Valhalla) would need us to place and stitch waypoints ourselves, and GraphHopper's free tier is smaller and non-commercial. The free tier may not cover commercial use, so all ORS-specific request and response shapes stay inside one candidate-building module: moving to GraphHopper's paid plan or a self-hosted ORS/GraphHopper later should touch only that module.
