@@ -32,7 +32,10 @@ type Env = {
   readonly CONVEX_SITE_URL: string;
   readonly JWKS: string;
   readonly JWT_PRIVATE_KEY: string;
+  readonly ORS_API_KEY: string;
+  readonly OVERPASS_API_URL: string | undefined;
   readonly SITE_URL: string;
+  readonly TYPESAFE_API_KEY: string;
 };
 
 /**
