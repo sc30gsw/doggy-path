@@ -1,38 +1,26 @@
-import { Button, Host } from '@expo/ui';
+import { Button, Column, RNHostView, Row, Text } from '@expo/ui';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 import { DEFAULT_POINT, DEFAULT_POINT_NAME, type LatLng } from '@/convex/domain/courseConditions';
 import { getDeviceLocation } from '@/features/course-conditions/device-location';
+import { usePalette } from '@/hooks/use-palette';
 
-const START_POINT_HINT = `未指定のときは現在地 → 前回の開始地点 → ${DEFAULT_POINT_NAME} の順に使います`;
+export const START_POINT_HINT = `未指定のときは現在地 → 前回の開始地点 → ${DEFAULT_POINT_NAME} の順に使います`;
+const MAP_HEIGHT = 220;
 const LOCATION_UNAVAILABLE = '現在地を取得できませんでした';
-
-function Notice({ message }: { message?: string }) {
-  if (!message) return null;
-  return <Text>{message}</Text>;
-}
-
-function StartMarker({ point }: { point: LatLng | null }) {
-  if (!point) return null;
-  return <Marker coordinate={point} />;
-}
-
-function StartHint({ shown }: { shown: boolean }) {
-  if (!shown) return null;
-  return <Text>{START_POINT_HINT}</Text>;
-}
 
 function regionFor(point: LatLng) {
   return { ...point, latitudeDelta: 0.02, longitudeDelta: 0.02 };
 }
 
-export function StartPointField(props: {
+export function StartPointRows(props: {
   value: LatLng | null;
   onChange: (point: LatLng | null) => void;
 }) {
   const [notice, setNotice] = useState<string | undefined>();
+  const palette = usePalette();
   const center = props.value ?? DEFAULT_POINT;
 
   const useDeviceLocation = () => {
@@ -52,25 +40,29 @@ export function StartPointField(props: {
   };
 
   return (
-    <View>
-      <Host matchContents>
-        <Button label="現在地" onPress={useDeviceLocation} />
-      </Host>
-      <Notice message={notice} />
-      <MapView style={{ height: 220 }} initialRegion={regionFor(center)} onLongPress={dropPin}>
-        <StartMarker point={props.value} />
-      </MapView>
-      <Host matchContents>
+    <>
+      <Column style={{ height: MAP_HEIGHT }}>
+        <RNHostView>
+          <View style={{ flex: 1, borderRadius: 10, overflow: 'hidden' }}>
+            <MapView style={{ flex: 1 }} initialRegion={regionFor(center)} onLongPress={dropPin}>
+              {props.value ? <Marker coordinate={props.value} /> : null}
+            </MapView>
+          </View>
+        </RNHostView>
+      </Column>
+      {notice ? <Text textStyle={{ color: palette.danger }}>{notice}</Text> : null}
+      <Row spacing={16}>
+        <Button variant="text" label="現在地" onPress={useDeviceLocation} />
         <Button
           variant="text"
           label="クリア"
+          disabled={props.value === null}
           onPress={() => {
             setNotice(undefined);
             props.onChange(null);
           }}
         />
-      </Host>
-      <StartHint shown={props.value === null} />
-    </View>
+      </Row>
+    </>
   );
 }

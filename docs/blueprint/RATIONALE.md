@@ -220,14 +220,14 @@ src/
     sign-in.tsx              signed-out screen
     onboarding.tsx           Owner's name + Dog Profile, required before the app is usable
     (tabs)/_layout.tsx       NativeTabs: ホーム / プロフィール (SF Symbol + Material icons)
-    (tabs)/index.tsx         Home: current proposal (useProposal) + 「コースを提案してもらう」 → /conditions
-    (tabs)/profile.tsx       edit Owner + Dog Profile, sign out
+    (tabs)/(home)/           _layout.tsx (Stack, title ホーム), index.tsx: Home per proposal phase (useProposal) + 「コースを提案してもらう」 → /conditions
+    (tabs)/(profile)/        _layout.tsx (Stack, title プロフィール), profile.tsx: edit Owner + Dog Profile, sign out
     conditions.tsx           form sheet; ?revise=1 prefills from the current proposal for 「条件を直す」
   features/
     account/                 app-providers.tsx (ConvexAuthProvider + token storage), token-storage.ts,
                              use-session.ts, root-stack.tsx (Stack.Protected guards), sign-in-form.tsx
     dog-profile/             dog-profile-draft.ts (Valibot → Owner), dog-profile-form.tsx
-                             (+ BreedField, BirthMonthField), breed-search.ts
+                             (+ BreedPicker outside the Host, BirthMonthRows), breed-search.ts
     course-conditions/       conditions-draft.ts (Valibot → CourseConditions), course-conditions-form.tsx,
                              mood-chips.tsx (MOOD_CHIPS), start-point-field.tsx, device-location.ts,
                              use-request-proposal.ts (→ RequestOutcome), labels.ts (refusal copy)
@@ -242,17 +242,17 @@ Copy a feature's files from `docs/blueprint/sketch/` to the same paths, then fil
 
 | Feature | Creates / fills | Edits existing | Removes |
 |---|---|---|---|
-| **0 Starter cleanup** | `src/app/(tabs)/_layout.tsx`, placeholder `(tabs)/index.tsx` and `(tabs)/profile.tsx` | `src/app/_layout.tsx` (stop importing `AppTabs`; render a plain `Stack` over `(tabs)`), `app.json` (drop `web`), `package.json` (drop the `web` and `reset-project` scripts; drop `react-native-web` / `react-dom` if `expo-doctor` agrees), `src/constants/theme.ts` (drop the `@/global.css` import and the web font branch), lint config (see [Best practices](#best-practices)) | `src/app/index.tsx`, `src/app/explore.tsx`, `src/components/{app-tabs,app-tabs.web,web-badge,external-link,hint-row,animated-icon.web}.tsx`, `animated-icon.module.css`, `ui/collapsible.tsx`, `src/hooks/use-color-scheme.web.ts`, `src/global.css`, `scripts/reset-project.js`, `assets/images/tabIcons/*`, `assets/images/{expo-badge*,expo-logo,react-logo*,logo-glow,tutorial-web,favicon}.png` |
-| **1 Account + Dog Profile** | `convex/{schema,auth,auth.config,http,owners}.ts` (schema: `owners` table only), `convex/convex.config.ts` (the Convex Auth vars only), `convex/model/owners.ts`, `convex/domain/{breeds,dogProfile}.ts`, `src/features/account/*`, `src/features/dog-profile/*`, `src/lib/parse-form.ts`, `src/app/{sign-in,onboarding}.tsx`, the body of `(tabs)/profile.tsx` | `src/app/_layout.tsx` (AppProviders + RootStack, after Feature 0), `package.json` (dependencies below) | — |
-| **2 Course Conditions** | `convex/domain/courseConditions.ts`, `src/features/course-conditions/*` (except `use-request-proposal.ts`), `src/app/conditions.tsx` without the `?revise` prefill | `root-stack.tsx` (one `Stack.Screen name="conditions"` line, after Feature 1), the Home button in `(tabs)/index.tsx` | — |
+| **0 Starter cleanup** | `src/app/(tabs)/_layout.tsx`, placeholder `(tabs)/(home)/index.tsx` and `(tabs)/(profile)/profile.tsx` | `src/app/_layout.tsx` (stop importing `AppTabs`; render a plain `Stack` over `(tabs)`), `app.json` (drop `web`), `package.json` (drop the `web` and `reset-project` scripts; drop `react-native-web` / `react-dom` if `expo-doctor` agrees), `src/constants/theme.ts` (drop the `@/global.css` import and the web font branch), lint config (see [Best practices](#best-practices)) | `src/app/index.tsx`, `src/app/explore.tsx`, `src/components/{app-tabs,app-tabs.web,web-badge,external-link,hint-row,animated-icon.web}.tsx`, `animated-icon.module.css`, `ui/collapsible.tsx`, `src/hooks/use-color-scheme.web.ts`, `src/global.css`, `scripts/reset-project.js`, `assets/images/tabIcons/*`, `assets/images/{expo-badge*,expo-logo,react-logo*,logo-glow,tutorial-web,favicon}.png` |
+| **1 Account + Dog Profile** | `convex/{schema,auth,auth.config,http,owners}.ts` (schema: `owners` table only), `convex/convex.config.ts` (the Convex Auth vars only), `convex/model/owners.ts`, `convex/domain/{breeds,dogProfile}.ts`, `src/features/account/*`, `src/features/dog-profile/*`, `src/lib/parse-form.ts`, `src/app/{sign-in,onboarding}.tsx`, the body of `(tabs)/(profile)/profile.tsx` | `src/app/_layout.tsx` (AppProviders + RootStack, after Feature 0), `package.json` (dependencies below) | — |
+| **2 Course Conditions** | `convex/domain/courseConditions.ts`, `src/features/course-conditions/*` (except `use-request-proposal.ts`), `src/app/conditions.tsx` without the `?revise` prefill | `root-stack.tsx` (one `Stack.Screen name="conditions"` line, after Feature 1), the Home button in `(tabs)/(home)/index.tsx` | — |
 | **3 Course proposal** | `convex/domain/{tuning,walk,proposal,ranking,proposalView}.ts`, `convex/model/proposals.ts`, `convex/proposals.ts`, `convex/proposalRuns.ts`, `convex/judge/**`, `convex/courseBuilder/**`, `use-request-proposal.ts` | `schema.ts` (add the `proposals` table), `convex.config.ts` (add `TYPESAFE_API_KEY`, `ORS_API_KEY`, `OVERPASS_API_URL`), `conditions.tsx` (add the `?revise` prefill from `proposals.current`) | — |
-| **4 Course display** | `src/features/course-display/*`, the proposal part of `(tabs)/index.tsx` | `app.json` (`["react-native-maps", { "androidGoogleMapsApiKey": … }]`) | — |
+| **4 Course display** | `src/features/course-display/*`, the proposal part of `(tabs)/(home)/index.tsx` | `app.json` (`["react-native-maps", { "androidGoogleMapsApiKey": … }]`) | — |
 
 Features 0, 1 and 2 mostly create disjoint files and can be built in parallel. They meet at three edit points, which must land in order:
 
 - `src/app/_layout.tsx`: Feature 0, then Feature 1.
 - `root-stack.tsx`: Feature 1 creates it, then Feature 2 adds one line.
-- `(tabs)/index.tsx`: Feature 0 creates a placeholder, Feature 2 adds the button, Feature 4 adds the proposal panel.
+- `(tabs)/(home)/index.tsx`: Feature 0 creates a placeholder, Feature 2 adds the button, Feature 4 adds the proposal panel.
 
 Feature 2 can merge before Feature 3 by stubbing the submit. Feature 3 needs Feature 1 (`owners`, `model/owners.ts`) and Feature 2 (`courseConditions.ts`). Feature 4 needs `ProposalView` from Feature 3.
 
@@ -390,10 +390,10 @@ These are the specs for the bodies that still throw `not implemented`. They live
   - The Birth Month is `now`'s year and month, with `estimated: false`.
 - **`draftFromOwner`:** the inverse of the schema's transform.
 - **`DogProfileForm`:**
-  - Fields: `TextInput` ×2, `BreedField`, `BirthMonthField`, sex `Picker`, weight (decimal pad) and Dog Memo (multiline), inside `FieldGroup`s.
+  - Fields: `TextInput` ×2, the breed row, `BirthMonthRows`, sex `Picker`, weight (decimal pad) and Dog Memo (multiline), inside `FieldGroup`s. The submit button sits in its own last section, whose footer shows 「保存しました」, 「入力内容を確認してください」 or 「保存できませんでした」.
   - Submit: `parseDogProfileDraft`, then `api.owners.save({ owner })`.
-- **`BreedField`:** a modal with a search box over `searchBreeds`, rendered as a `FlatList`. Choosing その他 reveals a text input.
-- **`BirthMonthField`:** two `@expo/ui` `Picker`s (year from `earliestBirthYear` to this year; month from `MONTHS`, with future months disabled) and a `Switch` 「推定」.
+- **`BreedPicker`:** a React Native `Modal` rendered outside the form's `Host`, with a search box over `searchBreeds` and a `FlatList` of rows. The form row 「犬種」 opens it. Choosing その他 reveals a text input.
+- **`BirthMonthRows`:** two labeled `@expo/ui` `Picker` rows (year from `earliestBirthYear` to this year; month from `MONTHS`, with future months disabled) and a `Switch` 「推定」.
 - **`searchBreeds`:**
   - Normalise: NFKC, then katakana to hiragana, then strip "・" and spaces (keep "ー").
   - Order: prefix matches first, then substring matches, in catalog order.
@@ -405,17 +405,17 @@ These are the specs for the bodies that still throw `not implemented`. They live
 
 - **`CourseConditionsForm`:**
   - The draft comes from `draftFromConditions(initial)`, or `EMPTY_CONDITIONS_DRAFT`.
-  - Fields: `MoodChips`, Today's Memo, distance (km) and time (min), and `StartPointField`.
+  - Fields: `MoodChips`, Today's Memo, distance (km) and time (min), and `StartPointRows`.
   - Submit: `parseConditionsDraft`, with errors shown inline. Otherwise `requestProposal`; on `ok`, `onRequested()`, and on a refusal, `REFUSAL_LABELS[refusal]` inline.
   - The button is disabled while pending.
 - **`MoodChips`:**
-  - A wrapping row of `MOOD_IDS`. Each chip is a `SymbolView` of `MOOD_CHIPS[id].symbol` plus `MOOD_CHIPS[id].label`, with `accessibilityRole="radio"`.
+  - A horizontal `FlatList` of `MOOD_IDS`, hosted in the form through `RNHostView`. Each chip is a `SymbolView` of `MOOD_CHIPS[id].symbol` plus `MOOD_CHIPS[id].label`, with `accessibilityRole="radio"`.
   - Tapping the selected chip clears it.
 - **`getDeviceLocation`:**
   - Call `requestForegroundPermissionsAsync`. If permission is not granted, return `null`.
   - Otherwise race `getCurrentPositionAsync({ accuracy: Balanced })` against `DEVICE_LOCATION_TIMEOUT_MS`, falling back to `getLastKnownPositionAsync({ maxAge: 10 min })`.
   - It never throws.
-- **`StartPointField`:**
+- **`StartPointRows`:**
   - 「現在地」 calls `getDeviceLocation()`, with a toast when the result is null.
   - A `MapView` (initial region: the value, or `DEFAULT_POINT`) drops a pin on long-press. 「クリア」 clears it.
   - When empty, the hint reads `未指定のときは現在地 → 前回の開始地点 → ${DEFAULT_POINT_NAME} の順に使います`.

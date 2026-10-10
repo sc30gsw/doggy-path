@@ -1,42 +1,34 @@
-import { Button, Host } from '@expo/ui';
 import { router } from 'expo-router';
-import { useColorScheme, View } from 'react-native';
-
-import { Colors } from '@/constants/theme';
+import { View } from 'react-native';
 
 import {
   FailedView,
+  IdleView,
   NeedsConfirmationView,
   ReadyView,
   WorkingView,
 } from '@/features/course-display/proposal-views';
 import { useProposal, type ProposalScreen } from '@/features/course-display/use-proposal';
+import { usePalette } from '@/hooks/use-palette';
+
+const openConditions = () => router.push('/conditions');
 
 export default function HomeScreen() {
   const screen = useProposal();
-  const scheme = useColorScheme();
-  const palette = scheme === 'dark' ? Colors.dark : Colors.light;
+  const palette = usePalette();
   return (
     <View style={{ flex: 1, backgroundColor: palette.background }}>
       <ProposalBody screen={screen} />
-      {screen.phase === 'working' ? null : <ProposeButton />}
     </View>
-  );
-}
-
-function ProposeButton() {
-  return (
-    <Host matchContents>
-      <Button label="コースを提案してもらう" onPress={() => router.push('/conditions')} />
-    </Host>
   );
 }
 
 function ProposalBody({ screen }: { screen: ProposalScreen }) {
   switch (screen.phase) {
     case 'loading':
-    case 'none':
       return null;
+    case 'none':
+      return <IdleView onPropose={openConditions} />;
     case 'working':
       return <WorkingView step={screen.step} />;
     case 'needsConfirmation':
@@ -49,7 +41,12 @@ function ProposalBody({ screen }: { screen: ProposalScreen }) {
       );
     case 'ready':
       return (
-        <ReadyView dogName={screen.dogName} startPoint={screen.startPoint} shown={screen.shown} />
+        <ReadyView
+          dogName={screen.dogName}
+          startPoint={screen.startPoint}
+          shown={screen.shown}
+          onPropose={openConditions}
+        />
       );
     case 'failed':
       return (
@@ -57,6 +54,7 @@ function ProposalBody({ screen }: { screen: ProposalScreen }) {
           reason={screen.reason}
           retryableAt={screen.retryableAt}
           onRetry={screen.retry}
+          onPropose={openConditions}
         />
       );
     default: {

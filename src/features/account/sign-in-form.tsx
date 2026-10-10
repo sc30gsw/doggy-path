@@ -1,8 +1,11 @@
 import { useAuthActions } from '@convex-dev/auth/react';
-import { Button, Column, Host, Text, TextInput } from '@expo/ui';
+import { FieldGroup, Host, Text, TextInput } from '@expo/ui';
 import { useState } from 'react';
 import * as vb from 'valibot';
 
+import { FORM_MODIFIERS } from '@/components/form-modifiers';
+import { CenteredButton } from '@/components/form-rows';
+import { usePalette } from '@/hooks/use-palette';
 import { parseForm, type FormResult } from '@/lib/parse-form';
 
 type CredentialsDraft = { email: string; password: string; flow: 'signIn' | 'signUp' };
@@ -28,6 +31,7 @@ export function SignInForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
+  const palette = usePalette();
 
   const submit = () => {
     const parsed = parseCredentialsDraft({ email, password, flow });
@@ -48,30 +52,40 @@ export function SignInForm() {
 
   return (
     <Host style={{ flex: 1 }}>
-      <Column spacing={12}>
-        <TextInput
-          placeholder="メールアドレス"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          onChangeText={setEmail}
-        />
-        <TextInput placeholder="パスワード" secureTextEntry onChangeText={setPassword} />
-        {error ? <Text>{error}</Text> : null}
-        <Button
-          label={flow === 'signIn' ? 'ログイン' : '登録してはじめる'}
-          disabled={pending}
-          onPress={submit}
-        />
-        <Button
-          variant="text"
-          label={flow === 'signIn' ? 'アカウントを作る' : 'ログインに戻る'}
-          onPress={() => {
-            setFlow((current) => (current === 'signIn' ? 'signUp' : 'signIn'));
-            setError(undefined);
-          }}
-        />
-      </Column>
+      <FieldGroup modifiers={FORM_MODIFIERS}>
+        <FieldGroup.Section>
+          <TextInput
+            placeholder="メールアドレス"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={setEmail}
+          />
+          <TextInput placeholder="パスワード" secureTextEntry onChangeText={setPassword} />
+          {error ? (
+            <FieldGroup.SectionFooter>
+              <Text textStyle={{ color: palette.danger }}>{error}</Text>
+            </FieldGroup.SectionFooter>
+          ) : null}
+        </FieldGroup.Section>
+        <FieldGroup.Section>
+          <CenteredButton
+            label={flow === 'signIn' ? 'ログイン' : '登録してはじめる'}
+            disabled={pending}
+            onPress={submit}
+          />
+        </FieldGroup.Section>
+        <FieldGroup.Section>
+          <CenteredButton
+            variant="text"
+            label={flow === 'signIn' ? 'アカウントを作る' : 'ログインに戻る'}
+            onPress={() => {
+              setFlow((current) => (current === 'signIn' ? 'signUp' : 'signIn'));
+              setError(undefined);
+            }}
+          />
+        </FieldGroup.Section>
+      </FieldGroup>
     </Host>
   );
 }

@@ -19,8 +19,10 @@
           "convex/proposalRuns.ts",
           "src/features/course-conditions/**",
           "src/features/course-display/**",
+          "src/features/dog-profile/**",
           "src/app/conditions.tsx",
-          "src/app/(tabs)/index.tsx"
+          "src/app/(tabs)/(home)/**",
+          "src/app/(tabs)/(profile)/**"
         ],
         "maxCyclomatic": 20,
         "maxCognitive": 20,

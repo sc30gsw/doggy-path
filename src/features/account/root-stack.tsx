@@ -14,10 +14,13 @@ export function RootStack() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={session.kind === 'signedOut'}>
-        <Stack.Screen name="sign-in" />
+        <Stack.Screen name="sign-in" options={{ headerShown: true, title: 'doggy-path' }} />
       </Stack.Protected>
       <Stack.Protected guard={session.kind === 'needsProfile'}>
-        <Stack.Screen name="onboarding" />
+        <Stack.Screen
+          name="onboarding"
+          options={{ headerShown: true, title: 'プロフィール登録' }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={session.kind === 'ready'}>
         <Stack.Screen name="(tabs)" />

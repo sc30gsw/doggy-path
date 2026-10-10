@@ -15,7 +15,7 @@ Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
 ```bash
 npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
 npx expo start              # start the dev server
-npx expo lint               # lint
+bun run lint                # lint (oxlint). Never `expo lint`: it installs ESLint and writes eslint.config.js
 npx tsc --noEmit            # typecheck
 npx expo-doctor             # diagnose dependency and config issues
 npx expo install --fix      # fix incompatible package versions
@@ -61,6 +61,8 @@ Rules here come from operator corrections. When the operator corrects an agent, 
 | Convex code follows the Convex Best Practices: typed `env` from `convex.config.ts`, thin public functions over `convex/model/`, `.withIndex` instead of `.filter`, no unbounded `.collect`, table names on `ctx.db` calls, access control in every public function, only `internal.*` scheduled. | Partly: the blueprint sketch follows them (`docs/blueprint/RATIONALE.md`, "Best practices"). Feature 0 adds oxlint's `@convex-dev/eslint-plugin` rules (via `jsPlugins`) and type-aware `no-floating-promises`. `explicit-table-ids` and `no-collect-in-query` need type information oxlint's JS plugins lack, so review enforces them. |
 | Jev prompts (`instructions`, `criteria`) are English; the Owner's text and the UI stay Japanese. Keep arithmetic out of Jev and give it numbers as words. | ADR 0005 and the code in `convex/judge/internal/questions.ts`, the nearest example. Nothing fails. |
 | Code carries no narration or pseudocode comments; constraints live in names, types and data. Run `/no-comments` before opening a PR. | Nothing fails. pstack's `/no-comments` (Comment Sicko) is the check. |
+| Inside an `@expo/ui` `Host`, every descendant is an `@expo/ui` view. A React Native view inside a Host goes through `RNHostView`, sized by a parent `Column` when it has no intrinsic size. A React Native `Modal` or list renders outside the Host. | Nothing fails at build time. A violation renders as an empty, untappable row in a dev build and aborts Expo Go with `SwiftUIVirtualViewObjC`. The verify skill (`.claude/skills/verify`) drives every screen on the simulator. |
+| Lint with `bun run lint` (oxlint). Never run `expo lint`. | The Commands block above. `expo lint` installs ESLint, rewrites `package.json` and `bun.lock`, and adds `eslint.config.js`, which also stops the react-doctor pre-commit hook from scanning. |
 
 <!-- convex-ai-start -->
 

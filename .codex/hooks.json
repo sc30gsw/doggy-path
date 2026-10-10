@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node '/Users/kakikaito/dev/github.com/sc30gsw/doggy-path/.codex/hooks/react-doctor.mjs'"
+          }
+        ]
+      }
+    ]
+  }
+}
