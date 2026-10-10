@@ -70,7 +70,7 @@ export function CourseConditionsForm(props: {
               setDraft((current) => ({ ...current, todayMemo }));
             }}
           />
-          <FieldNote message={errors.todayMemo} />
+          {fieldNote(errors.todayMemo, palette)}
         </FieldGroup.Section>
         <FieldGroup.Section title="目安">
           <TextInput
@@ -81,7 +81,7 @@ export function CourseConditionsForm(props: {
               setDraft((current) => ({ ...current, targetDistanceKm }));
             }}
           />
-          <FieldNote message={errors.targetDistanceKm} />
+          {fieldNote(errors.targetDistanceKm, palette)}
           <TextInput
             defaultValue={draft.targetTimeMin}
             placeholder="時間 (分)"
@@ -90,7 +90,7 @@ export function CourseConditionsForm(props: {
               setDraft((current) => ({ ...current, targetTimeMin }));
             }}
           />
-          <FieldNote message={errors.targetTimeMin} />
+          {fieldNote(errors.targetTimeMin, palette)}
         </FieldGroup.Section>
         <FieldGroup.Section title="開始地点">
           <StartPointRows
@@ -118,8 +118,7 @@ export function CourseConditionsForm(props: {
   );
 }
 
-function FieldNote({ message }: { message?: string }) {
-  const palette = usePalette();
+function fieldNote(message: string | undefined, palette: ReturnType<typeof usePalette>) {
   if (!message) return null;
   return <Text textStyle={{ color: palette.danger }}>{message}</Text>;
 }

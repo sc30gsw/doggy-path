@@ -34,10 +34,23 @@ import {
 
 const SEX_LABELS: Record<Sex, string> = { male: 'オス', female: 'メス' };
 
-function FieldError({ message }: { message?: string }) {
+type SubmitState = 'idle' | 'saving' | 'saved' | 'invalid' | 'failed';
+
+const SUBMIT_FOOTERS: Partial<
+  Record<SubmitState, { text: string; tone: 'danger' | 'textSecondary' }>
+> = {
+  saved: { text: '保存しました', tone: 'textSecondary' },
+  invalid: { text: '入力内容を確認してください', tone: 'danger' },
+  failed: { text: '保存できませんでした', tone: 'danger' },
+};
+
+function FieldError(props: { message: string }) {
   const palette = usePalette();
-  if (!message) return null;
-  return <Text textStyle={{ color: palette.danger }}>{message}</Text>;
+  return <Text textStyle={{ color: palette.danger }}>{props.message}</Text>;
+}
+
+function fieldError(message: string | undefined) {
+  return message ? <FieldError message={message} /> : null;
 }
 
 function monthsFor(year: number, now: Date): readonly Month[] {
@@ -65,8 +78,7 @@ export function DogProfileForm(props: {
     props.initial ? draftFromOwner(props.initial) : emptyDogProfileDraft(now),
   );
   const [errors, setErrors] = useState<Partial<Record<keyof DogProfileDraft, string>>>({});
-  const [pending, setPending] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [choosingBreed, setChoosingBreed] = useState(false);
   const palette = usePalette();
 
@@ -74,21 +86,15 @@ export function DogProfileForm(props: {
     const parsed = parseDogProfileDraft(draft);
     if (!parsed.ok) {
       setErrors(parsed.errors);
+      setSubmitState('invalid');
       return;
     }
-    setPending(true);
     setErrors({});
-    setSaved(false);
-    void save({ owner: parsed.value })
-      .then(() => {
-        setSaved(true);
-      })
-      .catch(() => {
-        setErrors({ ownerName: '保存できませんでした' });
-      })
-      .finally(() => {
-        setPending(false);
-      });
+    setSubmitState('saving');
+    void save({ owner: parsed.value }).then(
+      () => setSubmitState('saved'),
+      () => setSubmitState('failed'),
+    );
   };
 
   const setBreed = (breed: Breed) => {
@@ -107,7 +113,7 @@ export function DogProfileForm(props: {
                 setDraft((current) => ({ ...current, ownerName }));
               }}
             />
-            <FieldError message={errors.ownerName} />
+            {fieldError(errors.ownerName)}
           </FieldGroup.Section>
           <FieldGroup.Section title="わんちゃん">
             <TextInput
@@ -117,7 +123,7 @@ export function DogProfileForm(props: {
                 setDraft((current) => ({ ...current, dogName }));
               }}
             />
-            <FieldError message={errors.dogName} />
+            {fieldError(errors.dogName)}
             <LabeledRow label="犬種">
               <Button
                 variant="text"
@@ -125,8 +131,10 @@ export function DogProfileForm(props: {
                 onPress={() => setChoosingBreed(true)}
               />
             </LabeledRow>
-            <FieldError message={errors.breed} />
-            <OtherBreedText value={draft.breed} onChange={setBreed} />
+            {fieldError(errors.breed)}
+            {draft.breed?.kind === 'other' ? (
+              <OtherBreedText text={draft.breed.text} onChange={setBreed} />
+            ) : null}
             <BirthMonthRows
               now={now}
               value={{
@@ -143,14 +151,14 @@ export function DogProfileForm(props: {
                 }));
               }}
             />
-            <FieldError message={errors.birthYear ?? errors.birthMonth} />
+            {fieldError(errors.birthYear ?? errors.birthMonth)}
             <SexRow
               sex={draft.sex}
               onChange={(sex) => {
                 setDraft((current) => ({ ...current, sex }));
               }}
             />
-            <FieldError message={errors.sex} />
+            {fieldError(errors.sex)}
             <TextInput
               defaultValue={draft.weightKg}
               placeholder="体重 (kg)"
@@ -159,7 +167,7 @@ export function DogProfileForm(props: {
                 setDraft((current) => ({ ...current, weightKg }));
               }}
             />
-            <FieldError message={errors.weightKg} />
+            {fieldError(errors.weightKg)}
             <TextInput
               defaultValue={draft.dogMemo}
               placeholder="メモ"
@@ -168,20 +176,15 @@ export function DogProfileForm(props: {
                 setDraft((current) => ({ ...current, dogMemo }));
               }}
             />
-            <FieldError message={errors.dogMemo} />
+            {fieldError(errors.dogMemo)}
           </FieldGroup.Section>
           <FieldGroup.Section>
-            <CenteredButton label={props.submitLabel} disabled={pending} onPress={submit} />
-            {Object.keys(errors).length > 0 ? (
-              <FieldGroup.SectionFooter>
-                <Text textStyle={{ color: palette.danger }}>入力内容を確認してください</Text>
-              </FieldGroup.SectionFooter>
-            ) : null}
-            {saved ? (
-              <FieldGroup.SectionFooter>
-                <Text textStyle={{ color: palette.textSecondary }}>保存しました</Text>
-              </FieldGroup.SectionFooter>
-            ) : null}
+            <CenteredButton
+              label={props.submitLabel}
+              disabled={submitState === 'saving'}
+              onPress={submit}
+            />
+            {submitFooter(submitState, palette)}
           </FieldGroup.Section>
           {props.children}
         </FieldGroup>
@@ -190,11 +193,21 @@ export function DogProfileForm(props: {
         visible={choosingBreed}
         onClose={() => setChoosingBreed(false)}
         onPick={(breed) => {
-          setBreed(breed);
+          if (breed.kind !== 'other' || draft.breed?.kind !== 'other') setBreed(breed);
           setChoosingBreed(false);
         }}
       />
     </>
+  );
+}
+
+function submitFooter(state: SubmitState, palette: ReturnType<typeof usePalette>) {
+  const footer = SUBMIT_FOOTERS[state];
+  if (!footer) return null;
+  return (
+    <FieldGroup.SectionFooter>
+      <Text textStyle={{ color: palette[footer.tone] }}>{footer.text}</Text>
+    </FieldGroup.SectionFooter>
   );
 }
 
@@ -215,11 +228,10 @@ function SexRow(props: { sex: Sex | null; onChange: (sex: Sex) => void }) {
   );
 }
 
-function OtherBreedText(props: { value: Breed | null; onChange: (breed: Breed) => void }) {
-  if (props.value?.kind !== 'other') return null;
+function OtherBreedText(props: { text: string; onChange: (breed: Breed) => void }) {
   return (
     <TextInput
-      defaultValue={props.value.text}
+      defaultValue={props.text}
       placeholder="犬種"
       onChangeText={(text) => {
         props.onChange({ kind: 'other', text });
@@ -233,10 +245,6 @@ function BreedPicker(props: {
   onClose: () => void;
   onPick: (breed: Breed) => void;
 }) {
-  const [query, setQuery] = useState('');
-  const palette = usePalette();
-  const options = searchBreeds(query);
-
   return (
     <Modal
       visible={props.visible}
@@ -244,56 +252,66 @@ function BreedPicker(props: {
       presentationStyle="pageSheet"
       onRequestClose={props.onClose}
     >
-      <View style={{ flex: 1, backgroundColor: palette.background }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
-          <NativeTextInput
-            placeholder="犬種を検索"
-            placeholderTextColor={palette.textSecondary}
-            onChangeText={setQuery}
-            autoCorrect={false}
+      <BreedSearch onClose={props.onClose} onPick={props.onPick} />
+    </Modal>
+  );
+}
+
+function BreedSearch(props: { onClose: () => void; onPick: (breed: Breed) => void }) {
+  const [query, setQuery] = useState('');
+  const palette = usePalette();
+  const options = searchBreeds(query);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: palette.background }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
+        <NativeTextInput
+          placeholder="犬種を検索"
+          placeholderTextColor={palette.textSecondary}
+          onChangeText={setQuery}
+          autoCorrect={false}
+          style={{
+            flex: 1,
+            fontSize: 17,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: 10,
+            color: palette.text,
+            backgroundColor: palette.backgroundElement,
+          }}
+        />
+        <Pressable accessibilityRole="button" onPress={props.onClose} hitSlop={8}>
+          <NativeText style={{ fontSize: 17, color: palette.tint }}>閉じる</NativeText>
+        </Pressable>
+      </View>
+      <FlatList
+        data={options}
+        keyExtractor={(item) => (item.kind === 'jkc' ? item.id : item.kind)}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => props.onPick(breedFromOption(item))}
+            style={({ pressed }) => ({
+              paddingHorizontal: 20,
+              paddingVertical: 14,
+              opacity: pressed ? 0.5 : 1,
+            })}
+          >
+            <NativeText style={{ fontSize: 17, color: palette.text }}>{item.label}</NativeText>
+          </Pressable>
+        )}
+        ItemSeparatorComponent={() => (
+          <View
             style={{
-              flex: 1,
-              fontSize: 17,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderRadius: 10,
-              color: palette.text,
-              backgroundColor: palette.backgroundElement,
+              height: 1,
+              marginLeft: 20,
+              backgroundColor: palette.backgroundSelected,
             }}
           />
-          <Pressable accessibilityRole="button" onPress={props.onClose} hitSlop={8}>
-            <NativeText style={{ fontSize: 17, color: palette.tint }}>閉じる</NativeText>
-          </Pressable>
-        </View>
-        <FlatList
-          data={options}
-          keyExtractor={(item) => (item.kind === 'jkc' ? item.id : item.kind)}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => props.onPick(breedFromOption(item))}
-              style={({ pressed }) => ({
-                paddingHorizontal: 20,
-                paddingVertical: 14,
-                opacity: pressed ? 0.5 : 1,
-              })}
-            >
-              <NativeText style={{ fontSize: 17, color: palette.text }}>{item.label}</NativeText>
-            </Pressable>
-          )}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 1,
-                marginLeft: 20,
-                backgroundColor: palette.backgroundSelected,
-              }}
-            />
-          )}
-        />
-      </View>
-    </Modal>
+        )}
+      />
+    </View>
   );
 }
 
