@@ -57,4 +57,4 @@ Rules here come from operator corrections. When the operator corrects an agent, 
 | Rule | Enforced by |
 |---|---|
 | Write docs, ADRs, the glossary, code comments and PR text in English. Japanese appears only as UI copy (quoted screen labels). | Nothing fails. Every agent-facing file is English, so the nearest example an agent copies is English. |
-| Run feature and design work through pstack (`/poteto-mode` Feature playbook: `architect` with `arena`, then `/no-comments`), not straight to code. | The `pstack` plugin enabled in `.claude/settings.json`. Open: its `pstack-claude` marketplace is not declared there, so a session that has not installed it locally (cloud sessions, new teammates) loads no pstack skills. |
+| Run feature and design work through pstack (`/poteto-mode` Feature playbook: `architect` with `arena`, then `/no-comments`), not straight to code. | The `pstack` plugin, enabled in `.claude/settings.json` with its `pstack-claude` marketplace (`michael-denyer/pstack-claude`) declared under `extraKnownMarketplaces`, so every session can resolve it. Nothing fails if an agent skips the playbook. |
