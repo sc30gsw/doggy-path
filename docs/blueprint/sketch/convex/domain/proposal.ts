@@ -1,6 +1,7 @@
 import { v, type Infer } from 'convex/values';
 
 import { latLngValidator } from './courseConditions';
+import { RETRY_COOLDOWN_MS } from './tuning';
 import { lengthDecisionValidator, walkingPaceValidator } from './walk';
 
 export const conditionWarningValidator = v.union(
@@ -17,11 +18,6 @@ export const assessmentValidator = v.object({
 });
 export type Assessment = Infer<typeof assessmentValidator>;
 
-/**
- * Produced only by `buildCourseCandidates`: `path` is a closed loop from the Start Point with
- * at most MAX_PATH_POINTS points; every share is a fraction of `distanceM` in [0, 1];
- * `surroundings` is null when Overpass was unavailable.
- */
 export const courseValidator = v.object({
   key: v.string(),
   path: v.array(latLngValidator),
@@ -29,16 +25,19 @@ export const courseValidator = v.object({
   ascentM: v.number(),
   unpavedShare: v.number(),
   surroundings: v.union(
-    v.null(),
-    v.object({ greenShare: v.number(), mainRoadShare: v.number() }),
+    v.object({ kind: v.literal('unknown') }),
+    v.object({ kind: v.literal('known'), greenShare: v.number(), mainRoadShare: v.number() }),
   ),
 });
 export type Course = Infer<typeof courseValidator>;
 
 export const MAX_PATH_POINTS = 300;
 
-/** Jev Score positions in [0, 1]. `mood` is null when the Owner gave no Mood. */
-export const fitValidator = v.object({ body: v.number(), mood: v.union(v.null(), v.number()) });
+export const fitValidator = v.object({
+  bodyPositionTowardBest: v.number(),
+  moodPositionTowardBest: v.union(v.null(), v.number()),
+  unsuitableProbability: v.number(),
+});
 export type Fit = Infer<typeof fitValidator>;
 
 export const courseScoringValidator = v.union(
@@ -71,12 +70,14 @@ export const proposalStateValidator = v.union(
     phase: v.literal('failed'),
     failedDuring: v.literal('checking'),
     reason: failureReasonValidator,
+    failedAt: v.number(),
   }),
   v.object({
     phase: v.literal('failed'),
     failedDuring: v.literal('building'),
     assessment: assessmentValidator,
     reason: failureReasonValidator,
+    failedAt: v.number(),
   }),
 );
 export type ProposalState = Infer<typeof proposalStateValidator>;
@@ -92,64 +93,93 @@ export type OwnerEvent = { type: 'confirmed' } | { type: 'retryRequested' };
 
 export type ProposalEvent = RunEvent | OwnerEvent;
 
-export type Transition = { next: ProposalState; startRun: boolean };
+export type Transition =
+  | { kind: 'advanced'; next: ProposalState; startRun: boolean }
+  | { kind: 'ignored' };
 
-export const INITIAL_TRANSITION: Transition = { next: { phase: 'checking' }, startRun: true };
+export const INITIAL_STATE: ProposalState = { phase: 'checking' };
 
 export function isWorking(state: ProposalState): boolean {
   return state.phase === 'checking' || state.phase === 'building';
 }
 
-/** `null` means the event does not apply in this state: callers treat it as a no-op. */
+const IGNORED: Transition = { kind: 'ignored' };
+
 export function advance({
   state,
   event,
+  now,
 }: {
   state: ProposalState;
   event: ProposalEvent;
-}): Transition | null {
+  now: number;
+}): Transition {
   switch (event.type) {
     case 'assessed':
-      if (state.phase !== 'checking') return null;
+      if (state.phase !== 'checking') return IGNORED;
       return event.assessment.warnings.length > 0
-        ? { next: { phase: 'awaitingConfirmation', assessment: event.assessment }, startRun: false }
-        : { next: { phase: 'building', assessment: event.assessment }, startRun: true };
+        ? {
+            kind: 'advanced',
+            next: { phase: 'awaitingConfirmation', assessment: event.assessment },
+            startRun: false,
+          }
+        : {
+            kind: 'advanced',
+            next: { phase: 'building', assessment: event.assessment },
+            startRun: true,
+          };
     case 'confirmed':
-      if (state.phase !== 'awaitingConfirmation') return null;
-      return { next: { phase: 'building', assessment: state.assessment }, startRun: true };
-    case 'built':
-      if (state.phase !== 'building') return null;
+      if (state.phase !== 'awaitingConfirmation') return IGNORED;
       return {
+        kind: 'advanced',
+        next: { phase: 'building', assessment: state.assessment },
+        startRun: true,
+      };
+    case 'built':
+      if (state.phase !== 'building') return IGNORED;
+      return {
+        kind: 'advanced',
         next: { phase: 'ready', assessment: state.assessment, scoring: event.scoring },
         startRun: false,
       };
     case 'failed':
       if (state.phase === 'checking') {
         return {
-          next: { phase: 'failed', failedDuring: 'checking', reason: event.reason },
+          kind: 'advanced',
+          next: { phase: 'failed', failedDuring: 'checking', reason: event.reason, failedAt: now },
           startRun: false,
         };
       }
       if (state.phase === 'building') {
         return {
+          kind: 'advanced',
           next: {
             phase: 'failed',
             failedDuring: 'building',
             assessment: state.assessment,
             reason: event.reason,
+            failedAt: now,
           },
           startRun: false,
         };
       }
-      return null;
+      return IGNORED;
     case 'retryRequested':
-      if (state.phase !== 'failed') return null;
+      if (state.phase !== 'failed' || now < retryableAt(state)) return IGNORED;
       return state.failedDuring === 'checking'
-        ? { next: { phase: 'checking' }, startRun: true }
-        : { next: { phase: 'building', assessment: state.assessment }, startRun: true };
+        ? { kind: 'advanced', next: { phase: 'checking' }, startRun: true }
+        : {
+            kind: 'advanced',
+            next: { phase: 'building', assessment: state.assessment },
+            startRun: true,
+          };
     default: {
       const _exhaustive: never = event;
       return _exhaustive;
     }
   }
+}
+
+export function retryableAt(state: Extract<ProposalState, { phase: 'failed' }>): number {
+  return state.failedAt + RETRY_COOLDOWN_MS;
 }

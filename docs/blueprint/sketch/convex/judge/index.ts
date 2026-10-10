@@ -1,11 +1,10 @@
-import { lengthBasisOf } from '../domain/walk';
 import type { CourseConditions } from '../domain/courseConditions';
 import type { DogProfile } from '../domain/dogProfile';
-import type { Assessment, Course, CourseScoring } from '../domain/proposal';
+import type { Assessment, ConditionWarning, Course, CourseScoring } from '../domain/proposal';
+import { lengthBasisOf, targetsAreConsistent, type WalkingPace } from '../domain/walk';
 import { askJev, type AskJev } from './internal/jev';
 import {
   conditionQuestions,
-  coursesState,
   dogState,
   fallbackAssessment,
   fitQuestions,
@@ -29,9 +28,28 @@ export async function judgeConditions({
   const basis = lengthBasisOf(conditions);
   const result = await ask({
     state: { dog: dogState({ dog, now }), today: todayState(conditions) },
-    questions: conditionQuestions({ conditions, basis }),
+    questions: conditionQuestions(),
   });
-  return result.ok ? interpretConditions({ basis, answers: result.answers }) : fallbackAssessment(basis);
+  const assessment = result.ok
+    ? interpretConditions({ basis, answers: result.answers })
+    : fallbackAssessment(basis);
+  return {
+    ...assessment,
+    warnings: [...targetsWarnings({ conditions, pace: assessment.pace }), ...assessment.warnings],
+  };
+}
+
+function targetsWarnings({
+  conditions: { targetDistanceM, targetTimeMin },
+  pace,
+}: {
+  conditions: CourseConditions;
+  pace: WalkingPace;
+}): ConditionWarning[] {
+  if (targetDistanceM === undefined || targetTimeMin === undefined) return [];
+  return targetsAreConsistent({ targetDistanceM, targetTimeMin, pace })
+    ? []
+    : ['targetsInconsistent'];
 }
 
 /** Never rejects for a Jev problem: an unavailable Jev yields `byLength`. */
@@ -52,12 +70,8 @@ export async function judgeCourseFits({
 }): Promise<CourseScoring> {
   const hasMood = conditions.mood !== undefined;
   const result = await ask({
-    state: {
-      dog: dogState({ dog, now }),
-      today: todayState(conditions),
-      courses: coursesState({ courses, pace: assessment.pace }),
-    },
-    questions: fitQuestions({ courses, hasMood }),
+    state: { dog: dogState({ dog, now }), today: todayState(conditions) },
+    questions: fitQuestions({ courses, pace: assessment.pace, hasMood }),
   });
   if (!result.ok) return { kind: 'byLength', courses: [...courses] };
   return {

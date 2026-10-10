@@ -1,9 +1,8 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { CourseConditions, LatLng, ResolvedStartPoint } from './courseConditions';
-import type { ConditionWarning, FailureReason } from './proposal';
+import { retryableAt, type ConditionWarning, type Course, type FailureReason } from './proposal';
 import { rankCourses, type FitKind } from './ranking';
 import { estimateMinutes, targetLengthM, type WalkingPace } from './walk';
-import type { Course } from './proposal';
 
 export type ShownCourse = {
   key: string;
@@ -12,19 +11,23 @@ export type ShownCourse = {
   estimatedMinutes: number;
 };
 
-/** At most SHOWN_COURSE_COUNT courses, best first, never empty. */
 export type ShownCourses =
-  | { order: 'recommended'; courses: Array<ShownCourse & { reason: FitKind }> }
-  | { order: 'byLength'; courses: ShownCourse[] };
+  | {
+      order: 'recommended';
+      bestFirst: Array<ShownCourse & { reason: FitKind; unsuitable: boolean }>;
+      allUnsuitable: boolean;
+    }
+  | { order: 'byLength'; bestFirst: ShownCourse[] };
 
 export type ProposalStatus =
   | { kind: 'working'; step: 'checking' | 'building' }
   | { kind: 'needsConfirmation'; warnings: ConditionWarning[] }
   | { kind: 'ready'; shown: ShownCourses }
-  | { kind: 'failed'; reason: FailureReason };
+  | { kind: 'failed'; reason: FailureReason; retryableAt: number };
 
 export type ProposalView = {
   id: Id<'proposals'>;
+  dogName: string;
   conditions: CourseConditions;
   startPoint: ResolvedStartPoint;
   status: ProposalStatus;
@@ -33,6 +36,7 @@ export type ProposalView = {
 export function toProposalView(doc: Doc<'proposals'>): ProposalView {
   return {
     id: doc._id,
+    dogName: doc.dogSnapshot.dogName,
     conditions: doc.conditions,
     startPoint: doc.startPoint,
     status: toStatus(doc.state),
@@ -49,7 +53,7 @@ function toStatus(state: Doc<'proposals'>['state']): ProposalStatus {
     case 'ready':
       return { kind: 'ready', shown: toShownCourses(state) };
     case 'failed':
-      return { kind: 'failed', reason: state.reason };
+      return { kind: 'failed', reason: state.reason, retryableAt: retryableAt(state) };
     default: {
       const _exhaustive: never = state;
       return _exhaustive;
@@ -67,10 +71,18 @@ function toShownCourses(state: Extract<Doc<'proposals'>['state'], { phase: 'read
     case 'recommended':
       return {
         order: 'recommended',
-        courses: ranked.courses.map(({ course, reason }) => ({ ...toShownCourse({ course, pace }), reason })),
+        bestFirst: ranked.courses.map(({ course, reason, unsuitable }) => ({
+          ...toShownCourse({ course, pace }),
+          reason,
+          unsuitable,
+        })),
+        allUnsuitable: ranked.courses.every(({ unsuitable }) => unsuitable),
       };
     case 'byLength':
-      return { order: 'byLength', courses: ranked.courses.map((course) => toShownCourse({ course, pace })) };
+      return {
+        order: 'byLength',
+        bestFirst: ranked.courses.map((course) => toShownCourse({ course, pace })),
+      };
     default: {
       const _exhaustive: never = ranked;
       return _exhaustive;

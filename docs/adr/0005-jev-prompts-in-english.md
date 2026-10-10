@@ -1,0 +1,3 @@
+# Jev prompts are in English; the app UI stays Japanese
+
+The app speaks only Japanese to the Owner, but every Jev `instructions` and `criteria` string is written in English, because TypeSafe documents English as Jev's primary training language and CJK as "handled but not equally well". What the Owner wrote (Dog Memo, Today's Memo, the other-breed text) goes into Jev's `state` verbatim in Japanese, and closed lists such as Mood reach Jev as English text, not as their Japanese UI labels. We rejected Japanese prompts because thresholds tuned on them would be tuned against Jev's weaker language, and rewriting prompts later means re-tuning every threshold.

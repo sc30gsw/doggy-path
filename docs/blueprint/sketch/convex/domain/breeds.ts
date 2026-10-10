@@ -4,19 +4,35 @@ type BreedEntry = {
   readonly id: string;
   readonly ja: string;
   readonly kana: string;
+  readonly en: string;
 };
 
 export const JKC_BREEDS = [
-  { id: 'toy-poodle', ja: 'トイ・プードル', kana: 'といぷーどる' },
-  { id: 'chihuahua', ja: 'チワワ', kana: 'ちわわ' },
-  { id: 'miniature-dachshund', ja: 'ミニチュア・ダックスフンド', kana: 'みにちゅあだっくすふんど' },
-  { id: 'pomeranian', ja: 'ポメラニアン', kana: 'ぽめらにあん' },
-  { id: 'shiba', ja: '柴', kana: 'しば' },
-  { id: 'yorkshire-terrier', ja: 'ヨークシャー・テリア', kana: 'よーくしゃーてりあ' },
-  { id: 'shih-tzu', ja: 'シー・ズー', kana: 'しーずー' },
-  { id: 'french-bulldog', ja: 'フレンチ・ブルドッグ', kana: 'ふれんちぶるどっぐ' },
-  { id: 'golden-retriever', ja: 'ゴールデン・レトリーバー', kana: 'ごーるでんれとりーばー' },
-  { id: 'labrador-retriever', ja: 'ラブラドール・レトリーバー', kana: 'らぶらどーるれとりーばー' },
+  { id: 'toy-poodle', ja: 'トイ・プードル', kana: 'といぷーどる', en: 'Toy Poodle' },
+  { id: 'chihuahua', ja: 'チワワ', kana: 'ちわわ', en: 'Chihuahua' },
+  {
+    id: 'miniature-dachshund',
+    ja: 'ミニチュア・ダックスフンド',
+    kana: 'みにちゅあだっくすふんど',
+    en: 'Miniature Dachshund',
+  },
+  { id: 'pomeranian', ja: 'ポメラニアン', kana: 'ぽめらにあん', en: 'Pomeranian' },
+  { id: 'shiba', ja: '柴', kana: 'しば', en: 'Shiba' },
+  { id: 'yorkshire-terrier', ja: 'ヨークシャー・テリア', kana: 'よーくしゃーてりあ', en: 'Yorkshire Terrier' },
+  { id: 'shih-tzu', ja: 'シー・ズー', kana: 'しーずー', en: 'Shih Tzu' },
+  { id: 'french-bulldog', ja: 'フレンチ・ブルドッグ', kana: 'ふれんちぶるどっぐ', en: 'French Bulldog' },
+  {
+    id: 'golden-retriever',
+    ja: 'ゴールデン・レトリーバー',
+    kana: 'ごーるでんれとりーばー',
+    en: 'Golden Retriever',
+  },
+  {
+    id: 'labrador-retriever',
+    ja: 'ラブラドール・レトリーバー',
+    kana: 'らぶらどーるれとりーばー',
+    en: 'Labrador Retriever',
+  },
 ] as const satisfies readonly BreedEntry[];
 
 export type BreedId = (typeof JKC_BREEDS)[number]['id'];

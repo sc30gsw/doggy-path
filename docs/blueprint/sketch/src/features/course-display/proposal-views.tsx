@@ -17,6 +17,7 @@ export function NeedsConfirmationView(props: {
 }
 
 export function ReadyView(props: {
+  dogName: string;
   startPoint: ResolvedStartPoint;
   shown: ShownCourses;
 }): React.ReactElement {
@@ -26,6 +27,7 @@ export function ReadyView(props: {
 
 export function FailedView(props: {
   reason: FailureReason;
+  retryableAt: number;
   onRetry: () => Promise<null>;
 }): React.ReactElement {
   void props;
