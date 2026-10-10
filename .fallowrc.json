@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
   "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**"],
+  "ignoreDependencies": [
+    "expo-constants",
+    "expo-glass-effect",
+    "expo-status-bar",
+    "expo-system-ui"
+  ],
   "ignoreExports": [
     {
       "file": "src/constants/theme.ts",
