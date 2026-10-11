@@ -33,9 +33,12 @@ Preconditions:
 
 - Both name fields use the placeholder `名前`. The section title distinguishes `飼い主` from `わんちゃん`.
 - Signing out ends the session, and only the Owner can sign back in. Drive `profile-sign-out` last.
-- `ミックス` and `その他` are the last rows of the breed list. Choosing `その他` adds a `犬種` text field under the breed row. Choosing `その他` again keeps the typed text. Each time the sheet opens, the search starts empty.
+- `ミックス` and `その他` are the last rows of the breed list. Choosing `その他` adds a text field with the placeholder `犬種` under the breed row. Choosing `その他` again keeps the typed text. Each time the sheet opens, the search starts empty.
 - The birth-month menu hides future months in the current year. A future month is not a valid proof value.
 - `推定` is a switch on the birth month. Leaving it off is a complete profile.
-- A failed parse shows the field error in red under that field, and the footer under the submit group reads `入力内容を確認してください`. Scroll up to find the field.
+- A failed parse shows the field error in red under that field, and the footer under the submit group reads `入力内容を確認してください`. Scroll up to find the field. The field errors are `飼い主の名前を入力してください`, `わんちゃんの名前を入力してください`, `犬種を選んでください`, `性別を選んでください`, and `体重は0.5〜100kgで入力してください`.
+- Limits: names and the `その他` text up to 40 characters, the memo up to 500, the weight 0.5 to 100 kg, and birth years from 1995 to this year.
+- Choosing `その他` and leaving its `犬種` field empty shows only the footer `入力内容を確認してください`. No field error appears, because the error key is `breed.text` and the form renders `breed`. This is a known product gap, not a harness failure.
+- `保存しました` stays until the next submit. While saving, the button is disabled and no footer shows.
 - A failed save shows `保存できませんでした` in the footer under the submit group. A later invalid submit replaces `保存しました` with `入力内容を確認してください`.
 - Typing Japanese works with real kana key taps. Simulator text input must go through the English keyboard.

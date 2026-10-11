@@ -34,7 +34,9 @@ Preconditions:
 ## Gotchas
 
 - `verify-doggy-path drive sign-in` exiting 2 means no simulator was attached. That artifact records a blocked attempt. It does not prove sign-in.
-- The two flows share one form. `アカウントを作る` and `ログインに戻る` only change the submit label. They do not navigate.
+- The two flows share one form. `アカウントを作る` and `ログインに戻る` change the submit label and clear the error footer. They keep the typed text and do not navigate.
+- Validation shows one error at a time, the email error first. A malformed email with a short password shows only `メールアドレスの形式が正しくありません`.
+- Every Convex rejection, including sign-up with an email that already has an account, shows the same `メールアドレスかパスワードが正しくありません`. The submit button is disabled while the request runs.
 - An unknown email on `ログイン` makes Convex Auth throw `InvalidAccountId`. The development build also prints it as a red `[CONVEX A(auth:signIn)] Server Error` log in Metro and on screen. That is the expected rejection path, not a backend failure.
 - A field keeps its text across a validation error. Relaunch the client to start from an empty form.
 - A successful registration with no dog profile opens onboarding, not Home.
