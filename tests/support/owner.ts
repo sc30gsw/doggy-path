@@ -107,3 +107,11 @@ export async function expectCoursesBuilt(screen: Screen): Promise<void> {
   await expect(screen.getByText(WORKING)).toBeVisible();
   await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
 }
+
+export async function waitForConfirmationOrCourses(screen: Screen): Promise<void> {
+  await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
+  const settled = async () =>
+    (await screen.getByRole('button', 'このまま作る').count()) +
+    (await screen.getByRole('button', '1').count());
+  await expect.poll(settled, { timeout: BUILD_TIMEOUT }).toBeGreaterThan(0);
+}
