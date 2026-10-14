@@ -4,7 +4,7 @@ The maintained source for verifying what the Owner sees. Read this index, then t
 
 | Feature | Route | Test file | Status |
 | --- | --- | --- | --- |
-| [Sign in](./sign-in.md) | `/sign-in` | `tests/sign-in.e2e.ts` (validation), `tests/smoke.e2e.ts` (landmark) | tested, not yet run |
+| [Sign in](./sign-in.md) | `/sign-in` | `tests/sign-in.e2e.ts` (validation), `tests/smoke.e2e.ts` (landmark), `tests/app-lifecycle.e2e.ts` (scene round trip) | tested |
 | [Dog profile](./dog-profile.md) | `/onboarding`, `/(tabs)/(profile)/profile` | none | untested |
 | [Course conditions](./course-conditions.md) | `/conditions` (form sheet over Home) | none | untested |
 | [Course display](./course-display.md) | `/(tabs)/(home)` | none | untested |

@@ -27,6 +27,10 @@ LANG=en_US.UTF-8 bunx expo run:ios --device "<simulator name>" --no-bundler
 
 `--no-bundler` keeps it from starting a second Metro. The first build generates `ios/` (gitignored, never edited by hand) and takes several minutes. Without the UTF-8 locale `pod install` dies with `Unicode Normalization not appropriate for ASCII-8BIT`; if CocoaPods times out on its CDN, run `pod install` in `ios/` with the same locale and rebuild. Rebuild after any native dependency change.
 
+- `pod install` refuses the CocoaPods CDN with `Permission bits for '~/.netrc' should be 0600`. Tell the Owner; it is their file.
+- iOS 27 aborts any app that has not adopted the scene life cycle (`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption` in the `.ips`, nothing in Metro's log). `plugins/with-ios-scene-lifecycle.js` adopts it at prebuild. After changing a config plugin, run `LANG=en_US.UTF-8 bunx expo prebuild --platform ios --clean` before the build; `run:ios` keeps an existing `ios/`.
+- The first run after a prebuild bundles cold (about 6 s), past the smoke test's 5 s wait. Rerun once before reading it as a failure.
+
 ## Launch
 
 The runner starts the app. `npx e2e run <file>` and an MCP `open_session` both spawn `bunx expo start --host localhost --port 8081` from `app.command`, wait for `http://localhost:8081/status` to answer, launch the dev build with `--initialUrl http://localhost:8081` and the dev menu off, and stop Metro when the run or session ends. Metro's output goes to `.e2e/logs/metro.log`.
