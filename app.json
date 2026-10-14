@@ -46,7 +46,8 @@
         {
           "androidGoogleMapsApiKey": ""
         }
-      ]
+      ],
+      "./plugins/with-ios-scene-lifecycle"
     ],
     "experiments": {
       "typedRoutes": true,
