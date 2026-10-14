@@ -1,0 +1,62 @@
+import { describe, test } from '@e2e-dev/mobile';
+import { expect } from 'e2e';
+
+import { enterTargets, signUpThroughOnboarding, submitConditions } from './support/owner';
+
+// Routing can take up to 140 seconds before the ready card shows.
+const BUILD_TIMEOUT = 150_000;
+// display-working: the check, then the build, with the propose button hidden.
+const WORKING = /条件を確認しています…|コースを作っています…/;
+
+describe('course conditions', { serial: true }, () => {
+  test('conditions-open: the sheet opens blank from Home', async ({ app, device, screen }) => {
+    await device.clearKeychain();
+    await app.open();
+    await signUpThroughOnboarding(screen, device);
+
+    await screen.getByRole('button', 'コースを提案してもらう').tap();
+    await expect(screen.getByText('今日の気分')).toBeVisible();
+    await expect(screen.getByText('目安')).toBeVisible();
+    await expect(screen.getByText('開始地点')).toBeVisible();
+    await expect(screen.getByRole('radio', /のんびり/)).toBeVisible();
+    await expect(screen.getByPlaceholder('距離 (km)')).toHaveValue('');
+    await expect(screen.getByPlaceholder('時間 (分)')).toHaveValue('');
+    await app.screenshot('course-conditions-blank-sheet');
+  });
+
+  test('out-of-range targets keep the sheet open', async ({ app, device, screen }) => {
+    await enterTargets(screen, device, { distanceKm: '0.1', timeMin: '4' });
+    await submitConditions(screen, device);
+    await expect(screen.getByText('距離は0.2〜20kmで入力してください')).toBeVisible();
+    await expect(screen.getByText('時間は5〜240分で入力してください')).toBeVisible();
+    await expect(screen.getByPlaceholder('距離 (km)')).toBeVisible();
+    await app.screenshot('course-conditions-range-errors');
+  });
+
+  test('conditions-filled: a mood and consistent targets close the sheet', async ({
+    app,
+    device,
+    screen,
+  }) => {
+    // 3 km in 45 minutes is the normal 4 km/h pace, so no confirmation step is shown.
+    await screen.scrollUntilVisible(screen.getByRole('radio', /のんびり/), { direction: 'up' });
+    await screen.getByRole('radio', /のんびり/).tap();
+    await enterTargets(screen, device, { distanceKm: '3', timeMin: '45' });
+    await app.screenshot('course-conditions-filled-sheet');
+    await submitConditions(screen, device);
+    await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
+    await expect(screen.getByText(WORKING)).toBeVisible();
+    await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
+    await app.screenshot('course-conditions-filled-accepted');
+  });
+
+  test('conditions-empty: a blank request is accepted too', async ({ app, device, screen }) => {
+    await screen.getByRole('button', 'コースを提案してもらう').tap();
+    await expect(screen.getByPlaceholder('距離 (km)')).toHaveValue('');
+    await submitConditions(screen, device);
+    await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
+    await expect(screen.getByText(WORKING)).toBeVisible();
+    await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
+    await app.screenshot('course-conditions-empty-accepted');
+  });
+});

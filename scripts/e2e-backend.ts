@@ -2,10 +2,24 @@
 
 import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync } from 'node:crypto';
-import { cpSync, mkdirSync, readlinkSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
-import { E2E_BACKEND_DIR, PROJECT_ROOT, readE2eBackendPorts } from './e2e-backend-location';
+import {
+  E2E_BACKEND_DIR,
+  PROJECT_ROOT,
+  convexCliEnv,
+  readE2eBackend,
+  type E2eBackend,
+} from './e2e-backend-location';
 
 // esbuild bundles a symlinked `convex/` from its real path and the push fails with
 // `found wrong number of app bundles`, so `convex/` is copied and the rest linked.
@@ -19,12 +33,16 @@ const FIXED_ENV: Record<string, string> = {
   TYPESAFE_API_KEY: INVALID_PROVIDER_KEY,
 };
 const PUSH = ['dev', '--once', '--typecheck', 'disable', '--codegen', 'disable'];
-const ENV = { ...process.env, CONVEX_AGENT_MODE: 'anonymous', CONVEX_DEPLOYMENT: undefined };
+export const CONVEX_BIN = join(PROJECT_ROOT, 'node_modules', '.bin', 'convex');
 
-function convex(args: string[], options: { allowFailure?: boolean } = {}): string {
-  const result = spawnSync('bunx', ['convex', ...args], {
+function convex(
+  deployment: string | undefined,
+  args: string[],
+  options: { allowFailure?: boolean } = {},
+): string {
+  const result = spawnSync(CONVEX_BIN, args, {
     cwd: E2E_BACKEND_DIR,
-    env: ENV,
+    env: convexCliEnv(deployment),
     encoding: 'utf8',
   });
   // `convex dev --once` can print `✖` and still exit 0.
@@ -70,28 +88,40 @@ function authKeys(): Record<string, string> {
   };
 }
 
-linkProject();
-copyConvexFunctions();
-// The first push creates the local deployment, then fails on the variables set below.
-if (readE2eBackendPorts() === null) convex(PUSH, { allowFailure: true });
-if (readE2eBackendPorts() === null) {
-  throw new Error(`No local deployment was created in ${E2E_BACKEND_DIR}.`);
+function ensureLocalDeployment(): E2eBackend {
+  const existing = readE2eBackend();
+  if (existing) return existing;
+  // The first push creates the local deployment, then fails on the variables set below.
+  convex(undefined, PUSH, { allowFailure: true });
+  const created = readE2eBackend();
+  if (!created) throw new Error(`No local deployment was created in ${E2E_BACKEND_DIR}.`);
+  return created;
 }
 
-const present = new Set(
-  convex(['env', 'list'])
-    .split('\n')
-    .map((line) => line.split('=')[0]),
-);
-const missing: Record<string, string> = {
-  ...(present.has('JWT_PRIVATE_KEY') && present.has('JWKS') ? {} : authKeys()),
-  ...Object.fromEntries(Object.entries(FIXED_ENV).filter(([name]) => !present.has(name))),
-};
-for (const [name, value] of Object.entries(missing)) {
-  // `--` keeps a value that starts with `-----BEGIN` from parsing as a flag.
-  convex(['env', 'set', '--', name, value]);
-  console.log(`set ${name}`);
+export function prepareE2eBackend(): E2eBackend {
+  linkProject();
+  copyConvexFunctions();
+  const backend = ensureLocalDeployment();
+  writeFileSync(join(E2E_BACKEND_DIR, '.env.local'), `CONVEX_DEPLOYMENT=${backend.deployment}\n`);
+
+  const present = new Set(
+    convex(backend.deployment, ['env', 'list'])
+      .split('\n')
+      .map((line) => line.split('=')[0]),
+  );
+  const missing: Record<string, string> = {
+    ...(present.has('JWT_PRIVATE_KEY') && present.has('JWKS') ? {} : authKeys()),
+    ...Object.fromEntries(Object.entries(FIXED_ENV).filter(([name]) => !present.has(name))),
+  };
+  for (const [name, value] of Object.entries(missing)) {
+    // `--` keeps a value that starts with `-----BEGIN` from parsing as a flag.
+    convex(backend.deployment, ['env', 'set', '--', name, value]);
+    console.log(`set ${name}`);
+  }
+
+  convex(backend.deployment, PUSH);
+  console.log(`pushed functions to ${backend.deployment} at ${backend.cloudUrl}`);
+  return backend;
 }
 
-convex(PUSH);
-console.log(`pushed functions to the local deployment in ${E2E_BACKEND_DIR}`);
+if (import.meta.main) prepareE2eBackend();
