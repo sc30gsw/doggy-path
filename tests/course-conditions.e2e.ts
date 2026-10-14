@@ -24,15 +24,6 @@ describe('course conditions', { serial: true }, () => {
     await app.screenshot('course-conditions-blank-sheet');
   });
 
-  test('out-of-range targets keep the sheet open', async ({ app, device, screen }) => {
-    await enterTargets(screen, device, { distanceKm: '0.1', timeMin: '4' });
-    await submitConditions(screen, device);
-    await expect(screen.getByText('距離は0.2〜20kmで入力してください')).toBeVisible();
-    await expect(screen.getByText('時間は5〜240分で入力してください')).toBeVisible();
-    await expect(screen.getByPlaceholder('距離 (km)')).toBeVisible();
-    await app.screenshot('course-conditions-range-errors');
-  });
-
   test('conditions-filled: a mood and consistent targets close the sheet', async ({
     app,
     device,
@@ -58,5 +49,15 @@ describe('course conditions', { serial: true }, () => {
     await expect(screen.getByText(WORKING)).toBeVisible();
     await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
     await app.screenshot('course-conditions-empty-accepted');
+  });
+  // Last: its errors push この条件で提案 out of reach and the sheet ignores synthesized scrolls.
+  test('out-of-range targets keep the sheet open', async ({ app, device, screen }) => {
+    await screen.getByRole('button', 'コースを提案してもらう').tap();
+    await enterTargets(screen, device, { distanceKm: '0.1', timeMin: '4' });
+    await submitConditions(screen, device);
+    await expect(screen.getByText('距離は0.2〜20kmで入力してください')).toBeVisible();
+    await expect(screen.getByText('時間は5〜240分で入力してください')).toBeVisible();
+    await expect(screen.getByPlaceholder('距離 (km)')).toBeVisible();
+    await app.screenshot('course-conditions-range-errors');
   });
 });

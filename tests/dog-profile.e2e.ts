@@ -30,11 +30,13 @@ describe('dog profile', { serial: true }, () => {
     await app.screenshot('dog-profile-home');
   });
 
-  // The multiline メモ cannot be cleared by the runner, so the edit goes through 体重 (kg).
+  // The multiline メモ cannot be cleared by the runner, so the edit goes through 体重 (kg); the
+  // runner cannot confirm a fill into its number pad either, so it is typed.
   test('a saved weight is still there after a relaunch', async ({ app, device, screen }) => {
     await screen.getByText('プロフィール').tap();
     await screen.scrollUntilVisible(screen.getByRole('button', '保存する'));
-    await screen.getByPlaceholder('体重 (kg)').fill('8.5');
+    await screen.getByPlaceholder('体重 (kg)').clear();
+    await screen.getByPlaceholder('体重 (kg)').pressSequentially('8.5');
     await device.dismissKeyboard();
     await screen.getByRole('button', '保存する').tap();
     await expect(screen.getByText('保存しました')).toBeVisible();
@@ -55,8 +57,7 @@ describe('dog profile', { serial: true }, () => {
   });
 
   test('サインアウト returns to the sign-in form', async ({ screen }) => {
-    // The last group ends under the floating tab bar until the form is pushed past its end.
-    await screen.getByRole('button', '保存する').swipe({ direction: 'up' });
+    await screen.scrollUntilVisible(screen.getByRole('button', 'サインアウト'));
     await screen.getByRole('button', 'サインアウト').tap();
     await expect(screen.getByRole('button', 'ログイン')).toBeVisible();
   });
