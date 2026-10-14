@@ -4,13 +4,16 @@ import { expect } from 'e2e';
 import type { Device } from '@e2e-dev/mobile';
 import type { Screen } from 'e2e/engine';
 
+import type { ConditionsDraft } from '../../src/features/course-conditions/conditions-draft';
+
 const OWNER_NAME = 'Taro';
 const DOG_NAME = 'Momo';
 
 export type OwnerAccount = { email: string; password: string };
 
-// The run's own local deployment receives these, so a throwaway password is enough and keeps
-// screenshots available (a filled `Secret` withholds them for the rest of the test).
+// What an Owner types into the sheet: the form's own draft fields.
+type Targets = Pick<ConditionsDraft, 'targetDistanceKm' | 'targetTimeMin'>;
+
 export async function signUpNewOwner(screen: Screen): Promise<OwnerAccount> {
   const account = { email: `owner-${randomUUID()}@example.com`, password: `pw-${randomUUID()}` };
   await screen.getByRole('button', 'アカウントを作る').tap();
@@ -31,13 +34,10 @@ export async function signUpNewOwner(screen: Screen): Promise<OwnerAccount> {
 }
 
 export async function completeOnboarding(screen: Screen, device: Device): Promise<void> {
-  // Both name fields share the placeholder and only rows on screen are matched, so start from
-  // the top where the owner's comes first.
   await screen.scrollUntilVisible(screen.getByText('飼い主'), { direction: 'up' });
   const names = screen.getByPlaceholder('名前');
   await names.nth(0).fill(OWNER_NAME);
   await names.nth(1).fill(DOG_NAME);
-  // The keyboard stays up across the breed sheet and would cover the sex picker.
   await device.dismissKeyboard();
   await screen.getByRole('button', '犬種を選ぶ').tap();
   await screen.getByPlaceholder('犬種を検索').fill('しば');
@@ -63,13 +63,13 @@ export async function signUpThroughOnboarding(
 export async function enterTargets(
   screen: Screen,
   device: Device,
-  targets: { distanceKm: string; timeMin: string },
+  targets: Targets,
 ): Promise<void> {
   await screen.getByPlaceholder('距離 (km)').clear();
-  await screen.getByPlaceholder('距離 (km)').pressSequentially(targets.distanceKm);
+  await screen.getByPlaceholder('距離 (km)').pressSequentially(targets.targetDistanceKm);
   await device.dismissKeyboard();
   await screen.getByPlaceholder('時間 (分)').clear();
-  await screen.getByPlaceholder('時間 (分)').pressSequentially(targets.timeMin);
+  await screen.getByPlaceholder('時間 (分)').pressSequentially(targets.targetTimeMin);
   await device.dismissKeyboard();
 }
 
@@ -79,4 +79,29 @@ export async function submitConditions(screen: Screen, device: Device): Promise<
   await screen.getByPlaceholder('時間 (分)').tap();
   await device.dismissKeyboard();
   await screen.getByRole('button', 'この条件で提案').tap();
+}
+
+export const OUT_OF_RANGE_TARGETS = {
+  targetDistanceKm: '0.1',
+  targetTimeMin: '4',
+} as const satisfies Targets;
+export const WALKING_PACE_TARGETS = {
+  targetDistanceKm: '3',
+  targetTimeMin: '45',
+} as const satisfies Targets;
+export const TOO_FAST_TARGETS = {
+  targetDistanceKm: '10',
+  targetTimeMin: '5',
+} as const satisfies Targets;
+export const LONG_WALK_TARGETS = {
+  targetDistanceKm: '10',
+  targetTimeMin: '150',
+} as const satisfies Targets;
+
+const BUILD_TIMEOUT = 150_000;
+const WORKING = /条件を確認しています…|コースを作っています…/;
+
+export async function expectCoursesBuilt(screen: Screen): Promise<void> {
+  await expect(screen.getByText(WORKING)).toBeVisible();
+  await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
 }

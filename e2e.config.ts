@@ -14,7 +14,6 @@ export default {
       engine: mobile({ platform: 'ios', ...(device ? { device } : {}) }),
       app: {
         bundleId: 'com.sc30gsw.doggy-path',
-        // Refused without a prompt; a proposal then starts from the previous point or 東京駅.
         permissions: { location: 'deny' },
         launchArguments: [
           '--initialUrl',
@@ -44,8 +43,6 @@ export default {
   ],
   workers: 1,
   launchTimeout: 180_000,
-  // A relaunch shows its first screen about 5 s later, after the bundle loads and the session
-  // resolves, which the 5 s default only sometimes covers.
   assertionTimeout: 15_000,
   credentials: {
     owner: {

@@ -2,18 +2,19 @@ import { describe, test, type Device } from '@e2e-dev/mobile';
 import { expect } from 'e2e';
 import type { Screen } from 'e2e/engine';
 
-import { enterTargets, signUpThroughOnboarding, submitConditions } from './support/owner';
-
-// Routing can take up to 140 seconds before the ready card shows.
-const BUILD_TIMEOUT = 150_000;
-// display-working: the check, then the build, with the propose button hidden.
-const WORKING = /条件を確認しています…|コースを作っています…/;
+import {
+  OUT_OF_RANGE_TARGETS,
+  WALKING_PACE_TARGETS,
+  enterTargets,
+  expectCoursesBuilt,
+  signUpThroughOnboarding,
+  submitConditions,
+} from './support/owner';
 
 async function submitAndExpectCourses(screen: Screen, device: Device): Promise<void> {
   await submitConditions(screen, device);
   await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
-  await expect(screen.getByText(WORKING)).toBeVisible();
-  await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
+  await expectCoursesBuilt(screen);
 }
 
 describe('course conditions', { serial: true }, () => {
@@ -37,10 +38,9 @@ describe('course conditions', { serial: true }, () => {
     device,
     screen,
   }) => {
-    // 3 km in 45 minutes is the normal 4 km/h pace, so no confirmation step is shown.
     await screen.scrollUntilVisible(screen.getByRole('radio', /のんびり/), { direction: 'up' });
     await screen.getByRole('radio', /のんびり/).tap();
-    await enterTargets(screen, device, { distanceKm: '3', timeMin: '45' });
+    await enterTargets(screen, device, WALKING_PACE_TARGETS);
     await app.screenshot('course-conditions-filled-sheet');
     await submitAndExpectCourses(screen, device);
     await app.screenshot('course-conditions-filled-accepted');
@@ -53,10 +53,9 @@ describe('course conditions', { serial: true }, () => {
     await app.screenshot('course-conditions-empty-accepted');
   });
 
-  // Last: its errors push この条件で提案 out of reach and the sheet ignores synthesized scrolls.
   test('out-of-range targets keep the sheet open', async ({ app, device, screen }) => {
     await screen.getByRole('button', 'コースを提案してもらう').tap();
-    await enterTargets(screen, device, { distanceKm: '0.1', timeMin: '4' });
+    await enterTargets(screen, device, OUT_OF_RANGE_TARGETS);
     await submitConditions(screen, device);
     await expect(screen.getByText('距離は0.2〜20kmで入力してください')).toBeVisible();
     await expect(screen.getByText('時間は5〜240分で入力してください')).toBeVisible();

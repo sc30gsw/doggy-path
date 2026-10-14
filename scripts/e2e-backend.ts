@@ -24,8 +24,6 @@ import {
 // esbuild bundles a symlinked `convex/` from its real path and the push fails with
 // `found wrong number of app bundles`, so `convex/` is copied and the rest linked.
 const LINKED = ['package.json', 'node_modules'];
-// Real keys stay on the cloud deployment. With these the condition check falls back to its
-// defaults and routing fails, which Home shows as `コースを作るサービスに接続できませんでした`.
 const INVALID_PROVIDER_KEY = 'e2e-invalid-key';
 const FIXED_ENV: Record<string, string> = {
   SITE_URL: 'http://localhost:8081',
@@ -88,11 +86,14 @@ function authKeys(): Record<string, string> {
   };
 }
 
+function createDeploymentWithFailingFirstPush(): void {
+  convex(undefined, PUSH, { allowFailure: true });
+}
+
 function ensureLocalDeployment(): E2eBackend {
   const existing = readE2eBackend();
   if (existing) return existing;
-  // The first push creates the local deployment, then fails on the variables set below.
-  convex(undefined, PUSH, { allowFailure: true });
+  createDeploymentWithFailingFirstPush();
   const created = readE2eBackend();
   if (!created) throw new Error(`No local deployment was created in ${E2E_BACKEND_DIR}.`);
   return created;

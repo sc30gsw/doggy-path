@@ -3,7 +3,6 @@ import { expect } from 'e2e';
 
 import { signUpThroughOnboarding, type OwnerAccount } from './support/owner';
 
-// sign-up, sign-in-reject and sign-in-existing against the local e2e deployment.
 describe('sign-in with an account', { serial: true }, () => {
   let account: OwnerAccount;
 
@@ -19,7 +18,6 @@ describe('sign-in with an account', { serial: true }, () => {
     device,
     screen,
   }) => {
-    // The session token lives in the keychain, so clearing it signs the app out.
     await device.clearKeychain();
     await app.open();
     await screen.getByPlaceholder('メールアドレス').fill(account.email);
