@@ -44,9 +44,8 @@ function stopAll(exitCode: number): void {
   if (stopping) return;
   stopping = true;
   process.exitCode = exitCode;
-  for (const child of children) {
-    if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
-  }
+  // Signalling a child that already exited is a no-op.
+  for (const child of children) child.kill('SIGTERM');
 }
 
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => stopAll(0));

@@ -1,5 +1,6 @@
-import { describe, test } from '@e2e-dev/mobile';
+import { describe, test, type Device } from '@e2e-dev/mobile';
 import { expect } from 'e2e';
+import type { Screen } from 'e2e/engine';
 
 import { enterTargets, signUpThroughOnboarding, submitConditions } from './support/owner';
 
@@ -7,6 +8,13 @@ import { enterTargets, signUpThroughOnboarding, submitConditions } from './suppo
 const BUILD_TIMEOUT = 150_000;
 // display-working: the check, then the build, with the propose button hidden.
 const WORKING = /条件を確認しています…|コースを作っています…/;
+
+async function submitAndExpectCourses(screen: Screen, device: Device): Promise<void> {
+  await submitConditions(screen, device);
+  await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
+  await expect(screen.getByText(WORKING)).toBeVisible();
+  await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
+}
 
 describe('course conditions', { serial: true }, () => {
   test('conditions-open: the sheet opens blank from Home', async ({ app, device, screen }) => {
@@ -34,22 +42,17 @@ describe('course conditions', { serial: true }, () => {
     await screen.getByRole('radio', /のんびり/).tap();
     await enterTargets(screen, device, { distanceKm: '3', timeMin: '45' });
     await app.screenshot('course-conditions-filled-sheet');
-    await submitConditions(screen, device);
-    await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
-    await expect(screen.getByText(WORKING)).toBeVisible();
-    await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
+    await submitAndExpectCourses(screen, device);
     await app.screenshot('course-conditions-filled-accepted');
   });
 
   test('conditions-empty: a blank request is accepted too', async ({ app, device, screen }) => {
     await screen.getByRole('button', 'コースを提案してもらう').tap();
     await expect(screen.getByPlaceholder('距離 (km)')).toHaveValue('');
-    await submitConditions(screen, device);
-    await expect(screen.getByRole('button', 'この条件で提案')).toHaveCount(0);
-    await expect(screen.getByText(WORKING)).toBeVisible();
-    await expect(screen.getByRole('button', '1')).toBeVisible({ timeout: BUILD_TIMEOUT });
+    await submitAndExpectCourses(screen, device);
     await app.screenshot('course-conditions-empty-accepted');
   });
+
   // Last: its errors push この条件で提案 out of reach and the sheet ignores synthesized scrolls.
   test('out-of-range targets keep the sheet open', async ({ app, device, screen }) => {
     await screen.getByRole('button', 'コースを提案してもらう').tap();

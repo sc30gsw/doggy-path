@@ -4,8 +4,8 @@ import { expect } from 'e2e';
 import type { Device } from '@e2e-dev/mobile';
 import type { Screen } from 'e2e/engine';
 
-export const OWNER_NAME = 'Taro';
-export const DOG_NAME = 'Momo';
+const OWNER_NAME = 'Taro';
+const DOG_NAME = 'Momo';
 
 export type OwnerAccount = { email: string; password: string };
 

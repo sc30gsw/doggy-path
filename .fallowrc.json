@@ -1,13 +1,14 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
-  "entry": ["e2e.config.ts", "tests/**/*.e2e.ts"],
+  "entry": ["e2e.config.ts", "tests/**/*.e2e.ts", "scripts/e2e-stack.ts", "scripts/e2e-backend.ts"],
   "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**"],
   "ignoreDependencies": [
     "@auth/core",
     "expo-constants",
     "expo-glass-effect",
     "expo-status-bar",
-    "expo-system-ui"
+    "expo-system-ui",
+    "react-doctor"
   ],
   "health": {
     "thresholdOverrides": [
