@@ -9,6 +9,7 @@ import {
   expectCoursesBuilt,
   signUpThroughOnboarding,
   submitConditions,
+  waitForConfirmationOrCourses,
 } from './support/owner';
 
 const START_POINT_NOTE = '東京駅から作りました';
@@ -69,14 +70,23 @@ describe('course display', { serial: true }, () => {
   });
 
   test(
-    'a realistic 10 km walk skips the confirmation',
+    'a realistic 10 km walk raises no pace warning and builds courses',
     COURSE_BUILD_TEST,
     async ({ app, device, screen }) => {
       await screen.getByRole('button', 'コースを提案してもらう').tap();
       await enterTargets(screen, device, LONG_WALK_TARGETS);
       await submitConditions(screen, device);
-      await expectCoursesBuilt(screen);
-      await expect(screen.getByRole('button', 'このまま作る')).toHaveCount(0);
+      await waitForConfirmationOrCourses(screen);
+      await expect(
+        screen.getByText('距離と時間の組み合わせが合っていないかもしれません'),
+      ).toHaveCount(0);
+      // The LLM load check may still judge 10 km too much for the dog; the Owner then proceeds.
+      const proceed = screen.getByRole('button', 'このまま作る');
+      if ((await proceed.count()) > 0) {
+        await proceed.tap();
+        await expectCoursesBuilt(screen);
+      }
+      await expect(screen.getByRole('button', '1')).toBeVisible();
       await app.screenshot('course-display-realistic-build');
     },
   );
