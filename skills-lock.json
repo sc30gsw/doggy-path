@@ -205,6 +205,12 @@
       "skillPath": "skills/convex-verify/SKILL.md",
       "computedHash": "dbe65a37ca2e9a5afa55669b8928ce1dc3ac765151452008f9105bde049228f7"
     },
+    "create-verification-skill": {
+      "source": "tester-army/e2e",
+      "sourceType": "github",
+      "skillPath": "skills/create-verification-skill/SKILL.md",
+      "computedHash": "8e343eb58f7da5528faa8af51b83df4d12e91a12d976ea0c7f52dc7528535aab"
+    },
     "domain-modeling": {
       "source": "mattpocock/skills",
       "sourceType": "github",
