@@ -30,23 +30,22 @@ function withSceneManifest(config) {
   });
 }
 
+function adoptSceneDelegate(contents) {
+  if (contents.includes(PROVIDER_DECLARATION)) return contents;
+  if (!contents.includes(APP_DELEGATE_DECLARATION) || !WINDOW_START.test(contents)) {
+    throw new Error(
+      'with-ios-scene-lifecycle could not find the template AppDelegate. Update the plugin for the new template.',
+    );
+  }
+  return contents.replace(APP_DELEGATE_DECLARATION, PROVIDER_DECLARATION).replace(WINDOW_START, '');
+}
+
 function withSceneAppDelegate(config) {
   return withAppDelegate(config, (config) => {
     if (config.modResults.language !== 'swift') {
       throw new Error('with-ios-scene-lifecycle expects a Swift AppDelegate.');
     }
-    let contents = config.modResults.contents;
-    if (!contents.includes(PROVIDER_DECLARATION)) {
-      if (!contents.includes(APP_DELEGATE_DECLARATION) || !WINDOW_START.test(contents)) {
-        throw new Error(
-          'with-ios-scene-lifecycle could not find the template AppDelegate. Update the plugin for the new template.',
-        );
-      }
-      contents = contents
-        .replace(APP_DELEGATE_DECLARATION, PROVIDER_DECLARATION)
-        .replace(WINDOW_START, '');
-    }
-    config.modResults.contents = contents;
+    config.modResults.contents = adoptSceneDelegate(config.modResults.contents);
     return config;
   });
 }
