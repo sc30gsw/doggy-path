@@ -99,6 +99,8 @@ export const LONG_WALK_TARGETS = {
 } as const satisfies Targets;
 
 const BUILD_TIMEOUT = 150_000;
+const STEPS_AROUND_BUILD_TIMEOUT = 90_000;
+export const COURSE_BUILD_TEST = { timeout: BUILD_TIMEOUT + STEPS_AROUND_BUILD_TIMEOUT } as const;
 const WORKING = /条件を確認しています…|コースを作っています…/;
 
 export async function expectCoursesBuilt(screen: Screen): Promise<void> {

@@ -3,6 +3,7 @@ import { expect } from 'e2e';
 import type { Screen } from 'e2e/engine';
 
 import {
+  COURSE_BUILD_TEST,
   OUT_OF_RANGE_TARGETS,
   WALKING_PACE_TARGETS,
   enterTargets,
@@ -33,25 +34,29 @@ describe('course conditions', { serial: true }, () => {
     await app.screenshot('course-conditions-blank-sheet');
   });
 
-  test('conditions-filled: a mood and consistent targets close the sheet', async ({
-    app,
-    device,
-    screen,
-  }) => {
-    await screen.scrollUntilVisible(screen.getByRole('radio', /のんびり/), { direction: 'up' });
-    await screen.getByRole('radio', /のんびり/).tap();
-    await enterTargets(screen, device, WALKING_PACE_TARGETS);
-    await app.screenshot('course-conditions-filled-sheet');
-    await submitAndExpectCourses(screen, device);
-    await app.screenshot('course-conditions-filled-accepted');
-  });
+  test(
+    'conditions-filled: a mood and consistent targets close the sheet',
+    COURSE_BUILD_TEST,
+    async ({ app, device, screen }) => {
+      await screen.scrollUntilVisible(screen.getByRole('radio', /のんびり/), { direction: 'up' });
+      await screen.getByRole('radio', /のんびり/).tap();
+      await enterTargets(screen, device, WALKING_PACE_TARGETS);
+      await app.screenshot('course-conditions-filled-sheet');
+      await submitAndExpectCourses(screen, device);
+      await app.screenshot('course-conditions-filled-accepted');
+    },
+  );
 
-  test('conditions-empty: a blank request is accepted too', async ({ app, device, screen }) => {
-    await screen.getByRole('button', 'コースを提案してもらう').tap();
-    await expect(screen.getByPlaceholder('距離 (km)')).toHaveValue('');
-    await submitAndExpectCourses(screen, device);
-    await app.screenshot('course-conditions-empty-accepted');
-  });
+  test(
+    'conditions-empty: a blank request is accepted too',
+    COURSE_BUILD_TEST,
+    async ({ app, device, screen }) => {
+      await screen.getByRole('button', 'コースを提案してもらう').tap();
+      await expect(screen.getByPlaceholder('距離 (km)')).toHaveValue('');
+      await submitAndExpectCourses(screen, device);
+      await app.screenshot('course-conditions-empty-accepted');
+    },
+  );
 
   test('out-of-range targets keep the sheet open', async ({ app, device, screen }) => {
     await screen.getByRole('button', 'コースを提案してもらう').tap();
