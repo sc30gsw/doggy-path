@@ -1,7 +1,6 @@
 import { beforeEach, describe, test } from '@e2e-dev/mobile';
 import { expect } from 'e2e';
 
-// Client-side validation only: nothing here reaches the Convex deployment.
 describe('sign-in validation', () => {
   beforeEach(async ({ app, device }) => {
     await device.clearKeychain();

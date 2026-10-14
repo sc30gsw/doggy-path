@@ -1,7 +1,7 @@
 // iOS 27 aborts at launch (`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`)
 // unless the app adopts the scene-based life cycle. The SDK 57 template still starts React
 // Native from the app delegate, so this plugin hands the window to Expo's
-// `ExpoAppSceneDelegate` instead. Drop it once the Expo template adopts scenes itself.
+// `ExpoAppSceneDelegate` instead.
 const { withAppDelegate, withInfoPlist } = require('expo/config-plugins');
 
 const SCENE_DELEGATE_CLASS = 'EXExpoAppSceneDelegate';
@@ -9,7 +9,6 @@ const SCENE_DELEGATE_CLASS = 'EXExpoAppSceneDelegate';
 const APP_DELEGATE_DECLARATION = 'class AppDelegate: ExpoAppDelegate {';
 const PROVIDER_DECLARATION = 'class AppDelegate: ExpoAppDelegate, ExpoReactNativeFactoryProvider {';
 
-// The scene delegate creates the window and starts React Native into it.
 const WINDOW_START =
   /\n#if os\(iOS\) \|\| os\(tvOS\)\n\s*window = UIWindow\(frame: UIScreen\.main\.bounds\)\n\s*factory\.startReactNative\([\s\S]*?\)\n#endif\n/;
 
