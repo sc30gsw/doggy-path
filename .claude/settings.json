@@ -1,7 +1,7 @@
 {
   "enabledPlugins": {
     "expo@claude-plugins-official": true,
-    "pstack@pstack-claude": true
+    "pstack@cursor-plugins": true
   },
   "hooks": {
     "PostToolBatch": [],
@@ -17,10 +17,10 @@
     ]
   },
   "extraKnownMarketplaces": {
-    "pstack-claude": {
+    "cursor-plugins": {
       "source": {
         "source": "github",
-        "repo": "michael-denyer/pstack-claude"
+        "repo": "cursor/plugins"
       }
     }
   }
