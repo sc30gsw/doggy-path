@@ -16,14 +16,15 @@ Course conditions is the sheet where the Owner describes today's walk. Mood, tod
 
 ## Driving it with e2e
 
-- Test: none yet. A first test signs in as credential `owner`, taps `コースを提案してもらう`, expects the groups `今日の気分`, `目安` and `開始地点`, fills `距離 (km)` with `0.1`, taps `この条件で提案`, and expects `距離は0.2〜20kmで入力してください` with the sheet still open. That pins validation without spending a proposal.
-- Locators to check with `locate` first: `getByRole('button', 'コースを提案してもらう')`, mood chips `getByRole('radio', 'のんびり')` (and `元気いっぱい`, `冒険したい`, `疲れ気味`, `気分転換`), `getByPlaceholder('今日のメモ')`, `getByPlaceholder('距離 (km)')`, `getByPlaceholder('時間 (分)')`, `getByRole('button', '現在地')`, `getByRole('button', 'クリア')`, `getByRole('button', 'この条件で提案')`.
+- Test: `tests/course-conditions.e2e.ts`, serial on one fresh account. It pins `conditions-open` (groups `今日の気分`, `目安`, `開始地点`, the mood chips, empty targets), `conditions-filled` (`のんびり` with 3 km in 45 minutes builds courses), `conditions-empty` (a blank request builds courses), and range validation (0.1 km and 4 minutes show both errors and keep the sheet). `conditions-revise` is in `tests/course-display.e2e.ts`: after the 10 km in 5 minutes confirmation, `条件を変える` shows `10` and `5` and resubmits. The filled and empty tests need a real `ORS_API_KEY` (SKILL.md, Launch).
+- Shared steps in `tests/support/owner.ts`: `enterTargets` types into the number pads, `submitConditions` brings `この条件で提案` into reach and taps it, and the fixtures `OUT_OF_RANGE_TARGETS`, `WALKING_PACE_TARGETS`, `TOO_FAST_TARGETS`, `LONG_WALK_TARGETS` are typed from the form's `ConditionsDraft`.
+- Locators: `getByRole('button', 'コースを提案してもらう')`, mood chips `getByRole('radio', /のんびり/)` (a regex, as the test uses, since the chip also holds a symbol; also `元気いっぱい`, `冒険したい`, `疲れ気味`, `気分転換`), `getByPlaceholder('今日のメモ')`, `getByPlaceholder('距離 (km)')`, `getByPlaceholder('時間 (分)')`, `getByRole('button', '現在地')`, `getByRole('button', 'クリア')`, `getByRole('button', 'この条件で提案')`.
 - Dropping a pin is a `longPress` on the map; the map is native and has no accessible children, so use a point from the latest screenshot (`tap_at` lane) or press `現在地` instead.
-- Live walk: from Home `tap` the propose button, `observe`, `tap` a chip, `type` the fields, `dismiss_keyboard`, `scroll` to `この条件で提案`, `screenshot`, `tap` it, `screenshot` Home.
+- Live walk: from Home `tap` the propose button, `observe`, `tap` a chip, `type` each number field and `dismiss_keyboard` after each, `tap` `時間 (分)` and `dismiss_keyboard` to bring `この条件で提案` into reach (the sheet ignores `scroll`), `screenshot`, `tap` it, `screenshot` Home.
 
 ## Proof
 
-- The filled sheet before submit, then Home right after the sheet closes showing `条件を確認しています…`, a confirmation, a failure, or `コースを作っています…`. The pair shows the request was accepted; the new proposal row on the development deployment is the side effect.
+- The filled sheet before submit, then Home right after the sheet closes showing `条件を確認しています…`, a confirmation, a failure, or `コースを作っています…`. The pair shows the request was accepted; the new proposal row on the local e2e deployment is the side effect.
 - Validation: red text under the field and the sheet still open.
 
 ## Charters
@@ -38,8 +39,10 @@ conditions-revise|ios|skeptic|Sign in as credential owner. From ホーム submit
 - The propose button is hidden during `条件を確認しています…` and `コースを作っています…`. Reporting the sheet as missing from that screen is a false failure.
 - Empty fields are valid; a blank submit is a successful request. Out-of-range values show red text under the field and keep the sheet open: `距離は0.2〜20kmで入力してください`, `時間は5〜240分で入力してください`. A memo over 300 characters also fails.
 - `10` km in `5` minutes always produces `距離と時間の組み合わせが合っていないかもしれません`. `今日のわんちゃんには負担が大きいかもしれません` comes from an LLM check on the memo and is not deterministic.
-- The daily cap is 10 requests in a rolling 24 hours per account; retries do not count. The refusal reads `今日の提案は上限（10回）に達しました。明日また試してください` in red under `この条件で提案`, and the sheet stays open. A test or charter that loops submits burns the account's cap.
-- Number pads have no return key. Start a dismissing swipe below the mood-chip row, which scrolls horizontally and swallows it.
+- The daily cap is 10 requests in a rolling 24 hours per account; retries do not count. Tests sign up a fresh account per file, so they never reach it; a bug-bash account can. The refusal reads `今日の提案は上限（10回）に達しました。明日また試してください` in red under `この条件で提案`, and the sheet stays open. A test or charter that loops submits burns the account's cap.
+- Number pads have no return key and the runner cannot confirm a `fill` into them: `clear()`, `pressSequentially`, `device.dismissKeyboard()`. A manual swipe to dismiss must start below the mood-chip row, which scrolls horizontally and swallows it.
+- The sheet ignores synthesized scrolls. Focusing `時間 (分)` scrolls the list so the submit row sits above the keyboard and stays there after the pad closes.
+- With the `e2e-invalid-key` placeholder for `TYPESAFE_API_KEY` the LLM warning never appears; only the deterministic pace warning does.
 - `クリア` is disabled while no start point is chosen. `現在地` asks for location itself; `現在地を取得できませんでした` appears when permission is denied or no fix arrives within 5 seconds.
 - Only `条件を変える` pre-fills the sheet, and it stays blank until the latest proposal loads. Drag the grabber down to dismiss without submitting. The translucent background is by design.
 - Leave `app.json` `androidGoogleMapsApiKey` empty.

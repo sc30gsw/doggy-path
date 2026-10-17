@@ -4,10 +4,12 @@ The maintained source for verifying what the Owner sees. Read this index, then t
 
 | Feature | Route | Test file | Status |
 | --- | --- | --- | --- |
-| [Sign in](./sign-in.md) | `/sign-in` | `tests/sign-in.e2e.ts` (validation), `tests/smoke.e2e.ts` (landmark), `tests/app-lifecycle.e2e.ts` (scene round trip) | tested |
-| [Dog profile](./dog-profile.md) | `/onboarding`, `/(tabs)/(profile)/profile` | none | untested |
-| [Course conditions](./course-conditions.md) | `/conditions` (form sheet over Home) | none | untested |
-| [Course display](./course-display.md) | `/(tabs)/(home)` | none | untested |
+| [Sign in](./sign-in.md) | `/sign-in` | `tests/sign-in.e2e.ts` (validation), `tests/sign-in-account.e2e.ts` (sign-up, reject, existing), `tests/smoke.e2e.ts` (landmark), `tests/app-lifecycle.e2e.ts` (scene round trip) | tested |
+| [Dog profile](./dog-profile.md) | `/onboarding`, `/(tabs)/(profile)/profile` | `tests/dog-profile.e2e.ts` | tested |
+| [Course conditions](./course-conditions.md) | `/conditions` (form sheet over Home) | `tests/course-conditions.e2e.ts`, `conditions-revise` in `tests/course-display.e2e.ts` | tested |
+| [Course display](./course-display.md) | `/(tabs)/(home)` | `tests/course-display.e2e.ts` | tested; `display-failed` untested |
+
+Shared Owner steps and target fixtures are in `tests/support/owner.ts`. Tests that wait for course button `1` need a real `ORS_API_KEY` on the local e2e deployment (SKILL.md, Launch); with the placeholder they fail at that wait, and the failure sentence on screen is the routing failure, not a broken test.
 
 "tested, not yet run" means the test exists and its locators were taken from the source, not checked with `locate`. Run it once on a Mac and change the status to `tested`.
 
