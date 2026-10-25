@@ -577,38 +577,39 @@ function countdownFinishes(): Action {
   };
 }
 
+async function follow(world: World, action: Action): Promise<World | null> {
+  const live = revive(world);
+  installClock(live);
+  const failure = await action.run(live).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return { rule: 'threw', detail: message };
+  });
+  if (failure) printFailure(failure.rule, failure.detail, [...world.path, action.label], live);
+  if (live.proposal.attempt > maxAttempt) return null;
+  return snapshot(live, [...world.path, action.label]);
+}
+
+async function enqueue(world: World, seen: Set<string>, queue: World[]): Promise<void> {
+  if (world.proposal.attempt > maxAttempt) return;
+  for (const action of actionsFor(world)) {
+    const next = await follow(world, action);
+    if (!next) continue;
+    const key = worldKey(next);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    queue.push(next);
+  }
+}
+
 async function explore(start: World): Promise<number> {
-  const seen = new Set<string>();
+  const seen = new Set<string>([worldKey(start)]);
   const queue = [start];
-  seen.add(worldKey(start));
   let visited = 0;
   while (queue.length > 0) {
     const world = queue.shift();
     if (!world) break;
     visited += 1;
-    if (world.proposal.attempt > maxAttempt) continue;
-    for (const action of actionsFor(world)) {
-      const live = revive(world);
-      installClock(live);
-      let failure: Failure | null;
-      try {
-        failure = await action.run(live);
-      } catch (error) {
-        printFailure(
-          'threw',
-          error instanceof Error ? error.message : String(error),
-          [...world.path, action.label],
-          live,
-        );
-      }
-      if (failure) printFailure(failure.rule, failure.detail, [...world.path, action.label], live);
-      if (live.proposal.attempt > maxAttempt) continue;
-      const next = snapshot(live, [...world.path, action.label]);
-      const key = worldKey(next);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      queue.push(next);
-    }
+    await enqueue(world, seen, queue);
   }
   return visited;
 }

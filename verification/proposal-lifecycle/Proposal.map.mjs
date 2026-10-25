@@ -1,38 +1,52 @@
 // Chart labels for the Proposal lifecycle. The reader is the Owner looking at Home.
 export const readerActions = ["Confirm", "RetryCheck", "RetryBuild", "RetryTooSoon"];
 
+const COUNTDOWN_SUFFIX = { running: ", countdown running", done: ", you can retry" };
+
+const WHILE_COUNTING = {
+  "running|checking": "Checking the conditions, countdown still running",
+  "running|building": "Building the course, countdown still running",
+};
+
+const WHEN_STALE = {
+  ready: "Showing courses from an older attempt",
+  failedChecking: "Failed by an older attempt",
+  failedBuilding: "Failed by an older attempt",
+  awaitingConfirmation: "Asking you to confirm a warning from an older attempt",
+  building: "Building from an older attempt",
+  checking: "Checking because an older attempt reported",
+};
+
+const WHEN_BAD_RETRY = {
+  checking: "Checking the conditions after a failed build",
+  building: "Building the course after a failed check",
+};
+
+const WHEN_PENDING = {
+  building: "Building the course, warning still open",
+  ready: "Showing courses, warning still open",
+  failedChecking: "Failed, warning still open",
+  failedBuilding: "Failed, warning still open",
+};
+
+const PHASE = {
+  checking: "Checking the conditions",
+  awaitingConfirmation: "Asking you to confirm a warning",
+  building: "Building the course",
+  ready: "Showing courses",
+};
+
+const FAILED = { failedChecking: "Check failed", failedBuilding: "Build failed" };
+
 export function state(v) {
-  const countdown =
-    v.countdown === "running" ? ", countdown running" : v.countdown === "done" ? ", you can retry" : "";
-  if (v.countdown === "running" && v.phase === "checking") {
-    return "Checking the conditions, countdown still running";
-  }
-  if (v.countdown === "running" && v.phase === "building") {
-    return "Building the course, countdown still running";
-  }
-  if (v.staleWrote && v.phase === "ready") return "Showing courses from an older attempt";
-  if (v.staleWrote && (v.phase === "failedChecking" || v.phase === "failedBuilding")) {
-    return "Failed by an older attempt";
-  }
-  if (v.staleWrote && v.phase === "awaitingConfirmation") {
-    return "Asking you to confirm a warning from an older attempt";
-  }
-  if (v.staleWrote && v.phase === "building") return "Building from an older attempt";
-  if (v.staleWrote && v.phase === "checking") return "Checking because an older attempt reported";
-  if (v.badRetry && v.phase === "checking") return "Checking the conditions after a failed build";
-  if (v.badRetry && v.phase === "building") return "Building the course after a failed check";
-  if (v.warnings === "pending" && v.phase === "building") return "Building the course, warning still open";
-  if (v.warnings === "pending" && v.phase === "ready") return "Showing courses, warning still open";
-  if (v.warnings === "pending" && (v.phase === "failedChecking" || v.phase === "failedBuilding")) {
-    return "Failed, warning still open";
-  }
-  if (v.phase === "checking") return "Checking the conditions";
-  if (v.phase === "awaitingConfirmation") return "Asking you to confirm a warning";
-  if (v.phase === "building") return "Building the course";
-  if (v.phase === "ready") return "Showing courses";
-  if (v.phase === "failedChecking") return `Check failed${countdown}`;
-  if (v.phase === "failedBuilding") return `Build failed${countdown}`;
-  return "Home";
+  const counting = WHILE_COUNTING[`${v.countdown}|${v.phase}`];
+  if (counting) return counting;
+  if (v.staleWrote && WHEN_STALE[v.phase]) return WHEN_STALE[v.phase];
+  if (v.badRetry && WHEN_BAD_RETRY[v.phase]) return WHEN_BAD_RETRY[v.phase];
+  if (v.warnings === "pending" && WHEN_PENDING[v.phase]) return WHEN_PENDING[v.phase];
+  const failed = FAILED[v.phase];
+  if (failed) return `${failed}${COUNTDOWN_SUFFIX[v.countdown] ?? ""}`;
+  return PHASE[v.phase] ?? "Home";
 }
 
 export function group(v) {

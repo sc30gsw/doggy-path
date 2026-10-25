@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/fallow/schema.json",
-  "entry": ["e2e.config.ts", "tests/**/*.e2e.ts", "scripts/e2e-stack.ts", "scripts/e2e-backend.ts"],
+  "entry": [
+    "e2e.config.ts",
+    "tests/**/*.e2e.ts",
+    "scripts/e2e-stack.ts",
+    "scripts/e2e-backend.ts",
+    "verification/proposal-lifecycle/check.ts",
+    "verification/proposal-lifecycle/Proposal.map.mjs"
+  ],
   "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**"],
   "ignoreDependencies": [
     "@auth/core",
@@ -30,6 +37,13 @@
         "maxCognitive": 20,
         "maxCrap": 250,
         "reason": "The proposal reducer and the provider adapters are single functions, and this change has no coverage yet so CRAP tracks cyclomatic complexity."
+      },
+      {
+        "files": ["verification/proposal-lifecycle/**"],
+        "maxCyclomatic": 20,
+        "maxCognitive": 20,
+        "maxCrap": 250,
+        "reason": "The lifecycle check is an uncovered script, so CRAP tracks cyclomatic complexity. Its phase switches follow the Proposal reducer."
       }
     ]
   },
