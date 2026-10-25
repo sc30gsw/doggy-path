@@ -577,27 +577,37 @@ function countdownFinishes(): Action {
   };
 }
 
-async function follow(world: World, action: Action): Promise<World | null> {
+type Step =
+  | { kind: 'failure'; failure: Failure; live: Live; label: string }
+  | { kind: 'next'; world: World | null };
+
+async function follow(world: World, action: Action): Promise<Step> {
   const live = revive(world);
-  installClock(live);
   const failure = await action.run(live).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     return { rule: 'threw', detail: message };
   });
-  if (failure) printFailure(failure.rule, failure.detail, [...world.path, action.label], live);
-  if (live.proposal.attempt > maxAttempt) return null;
-  return snapshot(live, [...world.path, action.label]);
+  if (failure) return { kind: 'failure', failure, live, label: action.label };
+  if (live.proposal.attempt > maxAttempt) return { kind: 'next', world: null };
+  return { kind: 'next', world: snapshot(live, [...world.path, action.label]) };
 }
 
 async function enqueue(world: World, seen: Set<string>, queue: World[]): Promise<void> {
   if (world.proposal.attempt > maxAttempt) return;
-  for (const action of actionsFor(world)) {
-    const next = await follow(world, action);
-    if (!next) continue;
-    const key = worldKey(next);
+  const actions = actionsFor(world);
+  const previousNow = Date.now;
+  Date.now = () => world.now;
+  const steps = await Promise.all(actions.map((action) => follow(world, action)));
+  Date.now = previousNow;
+  for (const step of steps) {
+    if (step.kind === 'failure') {
+      printFailure(step.failure.rule, step.failure.detail, [...world.path, step.label], step.live);
+    }
+    if (!step.world) continue;
+    const key = worldKey(step.world);
     if (seen.has(key)) continue;
     seen.add(key);
-    queue.push(next);
+    queue.push(step.world);
   }
 }
 
