@@ -55,7 +55,7 @@ Left out: a second Proposal, the daily cap, retention, `proceed` or `retry` aime
 
 Each action in `Proposal.tla` cites the file and line of the guard it stands for. One action is one mutation or one lookup: `loadRun`, `record`, `proceed`, or `retry`. Move the sync commit forward only after you have re-read those lines at the new commit and the model still describes them. An intended lifecycle change updates the model and the walk together, then the sync commit. A bug stays a failing check.
 
-Sync commit: `SYNC_COMMIT`
+Sync commit: `2c5e7d45346f63550a22ca64592b83b0e6484cd0`
 
 ## Shown to fail
 
