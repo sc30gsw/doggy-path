@@ -1,0 +1,3 @@
+# Unit tests run on Bun's runner
+
+The pure functions under `convex/` had no unit-test runner. `bun run test:unit` runs `bun test` (`bun:test`). Bun is already the package manager, so the runner adds no second toolchain and the tests need no network or API key. Vitest and Jest would add a dependency and a config file for the same assertions. Node's built-in runner would split the repo across two commands. Test files sit next to the module they cover, because oxlint forbids importing `judge/internal` and `courseBuilder/internal` from outside those trees. `bun-test.d.ts` loads `bun-types` for `tsc`, because the Expo tsconfig does not pick up `@types/bun` on its own.
