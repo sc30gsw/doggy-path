@@ -1,0 +1,41 @@
+name: Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: ['master']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint, format, typecheck, and unit tests
+        parallel:
+          - name: Lint
+            run: bun run lint
+
+          - name: Format
+            run: bun run format:check
+
+          - name: Typecheck
+            run: npx tsc --noEmit
+
+          - name: Unit tests
+            run: bun run test:unit
