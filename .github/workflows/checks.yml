@@ -26,25 +26,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint
-        id: lint
-        run: bun run lint
-        background: true
-
-      - name: Format
-        id: format
-        run: bun run format:check
-        background: true
-
-      - name: Typecheck
-        id: typecheck
-        run: npx tsc --noEmit
-        background: true
-
-      - name: Unit tests
-        id: unit
-        run: bun run test:unit
-        background: true
-
-      - name: Wait for checks
-        wait-all:
+      - parallel:
+          - name: Lint
+            run: bun run lint
+          - name: Format
+            run: bun run format:check
+          - name: Typecheck
+            run: npx tsc --noEmit
+          - name: Unit tests
+            run: bun run test:unit

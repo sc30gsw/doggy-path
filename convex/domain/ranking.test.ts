@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import type { Course, Fit } from './proposal';
 import { rankCourses } from './ranking';
-import { FIT_WEIGHTS, SHOWN_COURSE_COUNT, UNSUITABLE_THRESHOLD } from './tuning';
+import { UNSUITABLE_THRESHOLD } from './tuning';
 
 function course(key: string, distanceM: number): Course {
   return {
@@ -23,13 +23,6 @@ function fit(body: number, mood: number | null, unsuitableProbability: number): 
   };
 }
 
-function weighted(scoredFit: Fit): number {
-  const mood = scoredFit.moodPositionTowardBest;
-  return mood === null
-    ? scoredFit.bodyPositionTowardBest
-    : FIT_WEIGHTS.body * scoredFit.bodyPositionTowardBest + FIT_WEIGHTS.mood * mood;
-}
-
 describe('rankCourses', () => {
   test('fit ranking keeps suitable courses ahead of unsuitable ones, then higher weight, then key', () => {
     const scored = [
@@ -40,19 +33,10 @@ describe('rankCourses', () => {
       { course: course('bad', 1), fit: fit(1, 1, UNSUITABLE_THRESHOLD + 0.01) },
     ];
     const ranked = rankCourses({ scoring: { kind: 'byFit', scored }, targetLengthM: 1 });
-    const expected = [...scored].sort(
-      (left, right) =>
-        Number(left.fit.unsuitableProbability > UNSUITABLE_THRESHOLD) -
-          Number(right.fit.unsuitableProbability > UNSUITABLE_THRESHOLD) ||
-        weighted(right.fit) - weighted(left.fit) ||
-        left.course.key.localeCompare(right.course.key),
-    );
 
     expect(ranked.order).toBe('recommended');
     if (ranked.order !== 'recommended') return;
-    expect(ranked.courses.map((entry) => entry.course.key)).toEqual(
-      expected.slice(0, SHOWN_COURSE_COUNT).map((entry) => entry.course.key),
-    );
+    expect(ranked.courses.map((entry) => entry.course.key)).toEqual(['high', 'body-only', 'low']);
     expect(scored.map((entry) => entry.course.key)).toEqual([
       'low',
       'high',
@@ -110,7 +94,7 @@ describe('rankCourses', () => {
     if (ranked.order !== 'recommended') return;
     expect(ranked.courses[0]?.course.key).toBe('ok');
     expect(ranked.courses[0]?.unsuitable).toBe(false);
-    if (SHOWN_COURSE_COUNT >= 2) expect(ranked.courses[1]?.unsuitable).toBe(true);
+    expect(ranked.courses[1]?.unsuitable).toBe(true);
   });
 
   test('length ranking sorts by distance from the target, then by key, and does not rewrite the input', () => {
@@ -120,18 +104,11 @@ describe('rankCourses', () => {
       course('a', 0),
       course('near', 1_100),
     ];
-    const targetLengthM = 1_000;
-    const ranked = rankCourses({ scoring: { kind: 'byLength', courses }, targetLengthM });
-    const closestFirst = [...courses].sort(
-      (left, right) =>
-        Math.abs(left.distanceM - targetLengthM) - Math.abs(right.distanceM - targetLengthM) ||
-        left.key.localeCompare(right.key),
-    );
+    const ranked = rankCourses({ scoring: { kind: 'byLength', courses }, targetLengthM: 1_000 });
 
-    expect(ranked).toEqual({
-      order: 'byLength',
-      courses: closestFirst.slice(0, SHOWN_COURSE_COUNT),
-    });
+    expect(ranked.order).toBe('byLength');
+    if (ranked.order !== 'byLength') return;
+    expect(ranked.courses.map((entry) => entry.key)).toEqual(['near', 'a', 'b']);
     expect(courses.map((entry) => entry.key)).toEqual(['far', 'b', 'a', 'near']);
   });
 });

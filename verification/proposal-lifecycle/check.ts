@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -138,13 +145,14 @@ function makeCtx(live: Live): MutationCtx {
           const predicates: Array<(row: ProposalDoc | Doc<'owners'>) => boolean> = [];
           const q = {
             eq: (field: string, value: unknown) => {
-              predicates.push((row) => (row as unknown as Record<string, unknown>)[field] === value);
+              predicates.push(
+                (row) => (row as unknown as Record<string, unknown>)[field] === value,
+              );
               return q;
             },
             gt: (field: string, value: unknown) => {
               predicates.push(
-                (row) =>
-                  Number((row as unknown as Record<string, unknown>)[field]) > Number(value),
+                (row) => Number((row as unknown as Record<string, unknown>)[field]) > Number(value),
               );
               return q;
             },
@@ -174,9 +182,14 @@ function makeCtx(live: Live): MutationCtx {
     },
   };
   const scheduler = {
-    runAfter: async (_delay: number, _reference: unknown, args: { attempt: number; event?: { reason: string } }) => {
+    runAfter: async (
+      _delay: number,
+      _reference: unknown,
+      args: { attempt: number; event?: { reason: string } },
+    ) => {
       if (args.event) {
-        if (args.event.reason !== 'timedOut') throw new Error(`unexpected watchdog reason ${args.event.reason}`);
+        if (args.event.reason !== 'timedOut')
+          throw new Error(`unexpected watchdog reason ${args.event.reason}`);
         live.scheduled.push({ kind: 'watchdog', attempt: args.attempt, reason: 'timedOut' });
       } else {
         live.scheduled.push({ kind: 'run', attempt: args.attempt });
@@ -207,7 +220,9 @@ function phaseLabel(state: ProposalState): string {
 }
 
 function sameDoc(left: ProposalDoc, right: ProposalDoc): boolean {
-  return JSON.stringify(left.state) === JSON.stringify(right.state) && left.attempt === right.attempt;
+  return (
+    JSON.stringify(left.state) === JSON.stringify(right.state) && left.attempt === right.attempt
+  );
 }
 
 function keptAssessment(state: ProposalState): Assessment | null {
@@ -230,8 +245,9 @@ function keptAssessment(state: ProposalState): Assessment | null {
 function checkWorld(live: Live): Failure | null {
   const { state } = live.proposal;
   if (state.phase === 'checking' || state.phase === 'building') {
-    const run = live.scheduled.some((job) => job.kind === 'run' && job.attempt === live.proposal.attempt)
-      || live.inflight.some((flight) => flight.attempt === live.proposal.attempt);
+    const run =
+      live.scheduled.some((job) => job.kind === 'run' && job.attempt === live.proposal.attempt) ||
+      live.inflight.some((flight) => flight.attempt === live.proposal.attempt);
     if (!run) {
       return {
         rule: 'RunOpen',
@@ -254,11 +270,7 @@ function checkWorld(live: Live): Failure | null {
       detail: `${phaseLabel(state)} while a Condition Check warning is still unconfirmed.`,
     };
   }
-  if (
-    live.openWarning &&
-    state.phase === 'failed' &&
-    state.failedDuring === 'building'
-  ) {
+  if (live.openWarning && state.phase === 'failed' && state.failedDuring === 'building') {
     return {
       rule: 'WarningGate',
       detail: 'Build failed while a Condition Check warning is still unconfirmed.',
@@ -276,7 +288,12 @@ function noteWarning(before: Live, after: Live): Failure | null {
   }
   if (prev.phase === 'awaitingConfirmation' && next.phase === 'building') after.openWarning = false;
   const carried = keptAssessment(next);
-  if (prev.phase === 'checking' && carried && carried.warnings.length > 0 && next.phase !== 'awaitingConfirmation') {
+  if (
+    prev.phase === 'checking' &&
+    carried &&
+    carried.warnings.length > 0 &&
+    next.phase !== 'awaitingConfirmation'
+  ) {
     after.openWarning = true;
   }
   return checkWorld(after);
@@ -286,7 +303,10 @@ function checkRetry(before: Live, after: Live): Failure | null {
   const prev = before.proposal.state;
   if (prev.phase !== 'failed') {
     if (!sameDoc(before.proposal, after.proposal)) {
-      return { rule: 'RetryResumes', detail: 'Retry changed Home when the proposal had not failed.' };
+      return {
+        rule: 'RetryResumes',
+        detail: 'Retry changed Home when the proposal had not failed.',
+      };
     }
     return null;
   }
@@ -300,7 +320,10 @@ function checkRetry(before: Live, after: Live): Failure | null {
     return null;
   }
   if (prev.failedDuring === 'checking') {
-    if (after.proposal.state.phase !== 'checking' || after.proposal.attempt !== before.proposal.attempt + 1) {
+    if (
+      after.proposal.state.phase !== 'checking' ||
+      after.proposal.attempt !== before.proposal.attempt + 1
+    ) {
       return {
         rule: 'RetryResumes',
         detail: 'Retry after a failed check did not return Home to the condition check.',
@@ -354,8 +377,7 @@ function revive(world: World): Live {
 
 function worldKey(world: World): string {
   const state = world.proposal.state;
-  const countdown =
-    state.phase === 'failed' ? world.now < retryableAt(state) : false;
+  const countdown = state.phase === 'failed' ? world.now < retryableAt(state) : false;
   return JSON.stringify({
     state,
     attempt: world.proposal.attempt,
@@ -461,20 +483,14 @@ function fireWatchdog(index: number): Action {
         attempt: job.attempt,
         event: { type: 'failed', reason: 'timedOut' },
       });
-      return (
-        checkStale(before, live, job.attempt) ??
-        noteWarning(before, live) ??
-        checkWorld(live)
-      );
+      return checkStale(before, live, job.attempt) ?? noteWarning(before, live) ?? checkWorld(live);
     },
   };
 }
 
 function reportAssessed(index: number, warning: boolean): Action {
   return {
-    label: warning
-      ? 'the condition check finds a warning'
-      : 'the condition check finds no warning',
+    label: warning ? 'the condition check finds a warning' : 'the condition check finds no warning',
     run: async (live) => {
       const flight = live.inflight[index];
       if (!flight) return { rule: 'model', detail: 'missing run report' };
@@ -539,7 +555,10 @@ function confirm(): Action {
         proposalId: live.proposal._id,
         event: { type: 'confirmed' },
       });
-      if (before.proposal.state.phase !== 'awaitingConfirmation' && !sameDoc(before.proposal, live.proposal)) {
+      if (
+        before.proposal.state.phase !== 'awaitingConfirmation' &&
+        !sameDoc(before.proposal, live.proposal)
+      ) {
         return {
           rule: 'WarningGate',
           detail: 'このまま作る changed Home when it was not asking for confirmation.',
@@ -626,12 +645,19 @@ async function explore(start: World): Promise<number> {
 
 async function tlaJar(): Promise<string> {
   if (process.env.TLA2TOOLS) {
-    if (!existsSync(process.env.TLA2TOOLS)) throw new Error(`TLA2TOOLS is missing: ${process.env.TLA2TOOLS}`);
+    if (!existsSync(process.env.TLA2TOOLS))
+      throw new Error(`TLA2TOOLS is missing: ${process.env.TLA2TOOLS}`);
     return process.env.TLA2TOOLS;
   }
-  const cache = join(process.env.XDG_CACHE_HOME ?? join(process.env.HOME ?? tmpdir(), '.cache'), 'doggy-path');
+  const cache = join(
+    process.env.XDG_CACHE_HOME ?? join(process.env.HOME ?? tmpdir(), '.cache'),
+    'doggy-path',
+  );
   const jar = join(cache, `tla2tools-${TLC_VERSION}.jar`);
-  if (!existsSync(jar) || createHash('sha256').update(readFileSync(jar)).digest('hex') !== TLC_SHA256) {
+  if (
+    !existsSync(jar) ||
+    createHash('sha256').update(readFileSync(jar)).digest('hex') !== TLC_SHA256
+  ) {
     mkdirSync(cache, { recursive: true });
     const response = await fetch(TLC_URL);
     if (!response.ok) throw new Error(`could not download TLC ${TLC_VERSION}: ${response.status}`);
@@ -666,7 +692,10 @@ function runTlc(): void {
     { cwd: dir, encoding: 'utf8' },
   );
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-  if (result.status !== 0 || !output.includes('Model checking completed. No error has been found.')) {
+  if (
+    result.status !== 0 ||
+    !output.includes('Model checking completed. No error has been found.')
+  ) {
     console.error(output);
     process.exit(result.status === 0 ? 1 : (result.status ?? 1));
   }

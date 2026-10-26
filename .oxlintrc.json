@@ -80,5 +80,10 @@
   "env": {
     "builtin": true
   },
-  "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**", ".agents/skills/**", ".claude/skills/**"]
+  "ignorePatterns": [
+    "convex/_generated/**",
+    "docs/blueprint/**",
+    ".agents/skills/**",
+    ".claude/skills/**"
+  ]
 }

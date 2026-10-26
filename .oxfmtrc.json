@@ -8,12 +8,7 @@
     ".claude/**",
     ".codex/**",
     ".cursor/**",
-    ".audit/**",
-    ".github/workflows/react-doctor.yml",
-    ".mcp.json",
-    ".oxlintrc.json",
     "AGENTS.md",
-    "assets/**",
-    "verification/**"
+    "assets/**"
   ]
 }
