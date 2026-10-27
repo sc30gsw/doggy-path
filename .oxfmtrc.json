@@ -1,5 +1,14 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "singleQuote": true,
-  "ignorePatterns": ["convex/_generated/**", "docs/blueprint/**"]
+  "ignorePatterns": [
+    "convex/_generated/**",
+    "docs/blueprint/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".cursor/**",
+    "AGENTS.md",
+    "assets/**"
+  ]
 }

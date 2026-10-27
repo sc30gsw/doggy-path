@@ -10,6 +10,7 @@ Exit predicate: on the iPhone 17 dev build, sign-in, onboarding, Profile, Home a
 - [ ] 6. Run Opening a PR. Pending the Owner's go-ahead (outward-facing).
 
 ## Task-specific
+
 - [x] Convex Auth error: InvalidAccountId from an unknown email on ログイン, the expected rejection path.
 - [x] Layouts per screen fixed.
 - [x] verify skill updated (.cursor) and mirrored (.claude/skills/verify), proven end to end.
